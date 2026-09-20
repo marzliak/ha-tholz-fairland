@@ -12,7 +12,7 @@ views:
             heading: Heat-pump control
             icon: mdi:heat-pump
           - type: thermostat
-            entity: water_heater.aquecedor_piscina_fairland_piscina
+            entity: water_heater.aquecedor_piscina_fairland_pool
             name: Pool heat pump
             grid_options:
               columns: 12
@@ -21,13 +21,13 @@ views:
             title: Operation
             show_header_toggle: false
             entities:
-              - entity: select.aquecedor_piscina_fairland_modo_ventilador
+              - entity: select.aquecedor_piscina_fairland_fan_mode
                 name: Fan mode
-              - entity: binary_sensor.aquecedor_piscina_fairland_trocador_de_calor
+              - entity: binary_sensor.aquecedor_piscina_fairland_heat_pump_running
                 name: Running
               - entity: binary_sensor.aquecedor_piscina_fairland_online
                 name: Online
-              - entity: binary_sensor.aquecedor_piscina_fairland_erro
+              - entity: binary_sensor.aquecedor_piscina_fairland_problem
                 name: Problem
 
       - type: grid
@@ -36,26 +36,26 @@ views:
             heading: Temperatures
             icon: mdi:thermometer-water
           - type: tile
-            entity: sensor.aquecedor_piscina_fairland_temperatura_entrada
+            entity: sensor.aquecedor_piscina_fairland_inlet_temperature
             name: Water inlet
             vertical: false
           - type: tile
-            entity: sensor.aquecedor_piscina_fairland_temperatura_saida
+            entity: sensor.aquecedor_piscina_fairland_outlet_temperature
             name: Water outlet
             vertical: false
           - type: tile
-            entity: sensor.aquecedor_piscina_fairland_temperatura_ambiente
+            entity: sensor.aquecedor_piscina_fairland_ambient_temperature
             name: Ambient
             vertical: false
           - type: history-graph
             title: Previous 24 hours
             hours_to_show: 24
             entities:
-              - entity: sensor.aquecedor_piscina_fairland_temperatura_entrada
+              - entity: sensor.aquecedor_piscina_fairland_inlet_temperature
                 name: Inlet
-              - entity: sensor.aquecedor_piscina_fairland_temperatura_saida
+              - entity: sensor.aquecedor_piscina_fairland_outlet_temperature
                 name: Outlet
-              - entity: sensor.aquecedor_piscina_fairland_temperatura_ambiente
+              - entity: sensor.aquecedor_piscina_fairland_ambient_temperature
                 name: Ambient
             grid_options:
               columns: 12
@@ -78,7 +78,7 @@ views:
             title: Physical operation
             hours_to_show: 24
             entities:
-              - entity: binary_sensor.aquecedor_piscina_fairland_trocador_de_calor
+              - entity: binary_sensor.aquecedor_piscina_fairland_heat_pump_running
                 name: Heat pump running
             grid_options:
               columns: 12
@@ -116,14 +116,12 @@ views:
             entities:
               - entity: binary_sensor.aquecedor_piscina_fairland_online
                 name: Online
-              - entity: binary_sensor.aquecedor_piscina_fairland_atualizando
-                name: Updating
-              - entity: binary_sensor.aquecedor_piscina_fairland_erro
+              - entity: binary_sensor.aquecedor_piscina_fairland_problem
                 name: Problem
-              - entity: sensor.aquecedor_piscina_fairland_erro
-                name: Error details
-              - entity: sensor.aquecedor_piscina_fairland_firmware_controlador_conectividade
-                name: Firmware
+              - entity: binary_sensor.aquecedor_piscina_fairland_heat_pump_running
+                name: Heat pump running
+              - entity: sensor.aquecedor_piscina_fairland_error_code
+                name: Error code
       - type: grid
         cards:
           - type: heading
