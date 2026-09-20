@@ -44,21 +44,9 @@ This integration supports only the cloud-connected Fairland/TurboSilence product
 
 ## Installation
 
-### Private preview
-
-While this repository is private, install it manually. HACS supports public GitHub repositories only, so the custom-repository method becomes available after a future public release.
-
-1. Download or clone the private repository using an authorized GitHub account.
+1. Download the repository.
 2. Copy `custom_components/tholz_fairland` into your Home Assistant `custom_components` directory.
 3. Restart Home Assistant.
-
-### HACS custom repository — after public release
-
-1. In HACS, open **Integrations**.
-2. Open the menu and select **Custom repositories**.
-3. Add this repository URL and choose **Integration**.
-4. Install **Tholz Fairland**.
-5. Restart Home Assistant.
 
 ## Configuration
 
@@ -89,6 +77,12 @@ The device identifier is fixed after setup. Credentials and polling frequency ca
 | Sensors | Five schedule slots and diagnostics | Read-only |
 
 Availability depends on fields reported by the device and cloud service.
+
+## Optional dashboard
+
+The integration works with Home Assistant's standard device page and does not install or modify dashboards. A native-card dashboard example is available in [`examples/dashboard-native.yaml`](examples/dashboard-native.yaml), with setup notes in [`examples/README.md`](examples/README.md).
+
+The example is optional, uses no custom cards, and can be adapted to the entity IDs created by your installation.
 
 ## Privacy and security
 

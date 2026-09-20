@@ -1,0 +1,140 @@
+title: Pool heat pump
+views:
+  - title: Pool
+    path: pool
+    icon: mdi:pool-thermometer
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Heat-pump control
+            icon: mdi:heat-pump
+          - type: thermostat
+            entity: water_heater.aquecedor_piscina_fairland_piscina
+            name: Pool heat pump
+            grid_options:
+              columns: 12
+              rows: 5
+          - type: entities
+            title: Operation
+            show_header_toggle: false
+            entities:
+              - entity: select.aquecedor_piscina_fairland_modo_ventilador
+                name: Fan mode
+              - entity: binary_sensor.aquecedor_piscina_fairland_trocador_de_calor
+                name: Running
+              - entity: binary_sensor.aquecedor_piscina_fairland_online
+                name: Online
+              - entity: binary_sensor.aquecedor_piscina_fairland_erro
+                name: Problem
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Temperatures
+            icon: mdi:thermometer-water
+          - type: tile
+            entity: sensor.aquecedor_piscina_fairland_temperatura_entrada
+            name: Water inlet
+            vertical: false
+          - type: tile
+            entity: sensor.aquecedor_piscina_fairland_temperatura_saida
+            name: Water outlet
+            vertical: false
+          - type: tile
+            entity: sensor.aquecedor_piscina_fairland_temperatura_ambiente
+            name: Ambient
+            vertical: false
+          - type: history-graph
+            title: Previous 24 hours
+            hours_to_show: 24
+            entities:
+              - entity: sensor.aquecedor_piscina_fairland_temperatura_entrada
+                name: Inlet
+              - entity: sensor.aquecedor_piscina_fairland_temperatura_saida
+                name: Outlet
+              - entity: sensor.aquecedor_piscina_fairland_temperatura_ambiente
+                name: Ambient
+            grid_options:
+              columns: 12
+              rows: 6
+
+      - type: grid
+        cards:
+          - type: heading
+            heading: Activity and schedule
+            icon: mdi:calendar-clock
+          - type: entities
+            title: Previous 24 hours
+            show_header_toggle: false
+            entities:
+              - entity: sensor.aquecedor_piscina_fairland_tempo_aquecendo_24h
+                name: Heating active time
+              - entity: sensor.aquecedor_piscina_fairland_ciclo_de_aquecimento_24h
+                name: Heating duty cycle
+          - type: history-graph
+            title: Physical operation
+            hours_to_show: 24
+            entities:
+              - entity: binary_sensor.aquecedor_piscina_fairland_trocador_de_calor
+                name: Heat pump running
+            grid_options:
+              columns: 12
+              rows: 4
+          - type: entities
+            title: Schedule — read only
+            show_header_toggle: false
+            entities:
+              - entity: sensor.aquecedor_piscina_fairland_agenda_1
+                name: Slot 1
+              - entity: sensor.aquecedor_piscina_fairland_agenda_2
+                name: Slot 2
+              - entity: sensor.aquecedor_piscina_fairland_agenda_3
+                name: Slot 3
+              - entity: sensor.aquecedor_piscina_fairland_agenda_4
+                name: Slot 4
+              - entity: sensor.aquecedor_piscina_fairland_agenda_5
+                name: Slot 5
+              - entity: sensor.aquecedor_piscina_fairland_agendas_ativas
+                name: Active slots
+
+  - title: Diagnostics
+    path: diagnostics
+    icon: mdi:stethoscope
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Device status
+            icon: mdi:information-outline
+          - type: entities
+            show_header_toggle: false
+            entities:
+              - entity: binary_sensor.aquecedor_piscina_fairland_online
+                name: Online
+              - entity: binary_sensor.aquecedor_piscina_fairland_atualizando
+                name: Updating
+              - entity: binary_sensor.aquecedor_piscina_fairland_erro
+                name: Problem
+              - entity: sensor.aquecedor_piscina_fairland_erro
+                name: Error details
+              - entity: sensor.aquecedor_piscina_fairland_firmware_controlador_conectividade
+                name: Firmware
+      - type: grid
+        cards:
+          - type: heading
+            heading: Schedule diagnostics
+            icon: mdi:calendar-search
+          - type: entities
+            show_header_toggle: false
+            entities:
+              - entity: sensor.aquecedor_piscina_fairland_agenda_versao
+                name: Version
+              - entity: sensor.aquecedor_piscina_fairland_agenda_atualizada
+                name: Last update
+              - entity: sensor.aquecedor_piscina_fairland_agendas_ativas
+                name: Active slots
