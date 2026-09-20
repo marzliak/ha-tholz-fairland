@@ -1,0 +1,50 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect a Tholz Fairland heat pump",
+        "description": "Connects through the vendor cloud. Setup validates credentials and reads state without sending a device command.",
+        "data": {
+          "name": "Name",
+          "cognito_user_sub": "Cloud user identifier",
+          "cognito_client_secret": "App client secret",
+          "cognito_refresh_token": "Refresh token",
+          "thing_id": "Device identifier",
+          "polling_interval": "Polling interval (seconds)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate Tholz Fairland",
+        "description": "The stored cloud session is no longer valid. Enter a fresh refresh token.",
+        "data": {
+          "cognito_refresh_token": "Refresh token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not authenticate or read the device. No device command was sent.",
+      "invalid_token": "The cloud session was rejected. Enter a fresh refresh token."
+    },
+    "abort": {
+      "already_configured": "This Fairland device is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Tholz Fairland options",
+        "description": "Changes are validated with a read-only request before the integration reloads. The device identifier cannot be changed here.",
+        "data": {
+          "cognito_user_sub": "Cloud user identifier",
+          "cognito_client_secret": "App client secret",
+          "cognito_refresh_token": "Refresh token",
+          "polling_interval": "Polling interval (seconds)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not authenticate or read the device. No device command was sent.",
+      "invalid_token": "The cloud session was rejected. Enter a fresh refresh token."
+    }
+  }
+}

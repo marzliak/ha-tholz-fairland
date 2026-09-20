@@ -1,0 +1,50 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Conectar uma bomba de calor Tholz Fairland",
+        "description": "Conecta pela nuvem do fabricante. A configuração valida as credenciais e lê o estado sem enviar comandos ao equipamento.",
+        "data": {
+          "name": "Nome",
+          "cognito_user_sub": "Identificador do usuário na nuvem",
+          "cognito_client_secret": "Segredo do cliente do aplicativo",
+          "cognito_refresh_token": "Token de atualização",
+          "thing_id": "Identificador do dispositivo",
+          "polling_interval": "Intervalo de leitura (segundos)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reautenticar Tholz Fairland",
+        "description": "A sessão armazenada não é mais válida. Informe um novo token de atualização.",
+        "data": {
+          "cognito_refresh_token": "Token de atualização"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Não foi possível autenticar ou ler o dispositivo. Nenhum comando foi enviado.",
+      "invalid_token": "A sessão na nuvem foi rejeitada. Informe um novo token de atualização."
+    },
+    "abort": {
+      "already_configured": "Este dispositivo Fairland já está configurado."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opções Tholz Fairland",
+        "description": "As alterações são validadas por uma leitura antes de recarregar a integração. O identificador do dispositivo não pode ser alterado aqui.",
+        "data": {
+          "cognito_user_sub": "Identificador do usuário na nuvem",
+          "cognito_client_secret": "Segredo do cliente do aplicativo",
+          "cognito_refresh_token": "Token de atualização",
+          "polling_interval": "Intervalo de leitura (segundos)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Não foi possível autenticar ou ler o dispositivo. Nenhum comando foi enviado.",
+      "invalid_token": "A sessão na nuvem foi rejeitada. Informe um novo token de atualização."
+    }
+  }
+}

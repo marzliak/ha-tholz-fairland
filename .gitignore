@@ -1,0 +1,13 @@
+# artifacts
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.coverage
+coverage.xml
+.venv/
+
+# editors and local Home Assistant data
+.vscode/
+.idea/
+config/
