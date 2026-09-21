@@ -78,6 +78,12 @@ The device identifier is fixed after setup. Credentials and polling frequency ca
 
 Availability depends on fields reported by the device and cloud service.
 
+## Dashboard preview
+
+[![Home Assistant dashboard showing Fairland heat-pump control, pool temperatures, and rolling activity metrics](docs/images/dashboard-overview.png)](docs/images/dashboard-overview.png)
+
+The screenshot shows one possible Home Assistant dashboard. Click the image to open it at full resolution.
+
 ## Optional dashboard
 
 The integration works with Home Assistant's standard device page and does not install or modify dashboards. A native-card dashboard example is available in [`examples/dashboard-native.yaml`](examples/dashboard-native.yaml), with setup notes in [`examples/README.md`](examples/README.md).
