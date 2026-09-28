@@ -1,5 +1,5 @@
 """
-Config-entry migration tests: schema 1.1 -> 1.2 (``async_migrate_entry``).
+Config-entry migration tests: schema 1.1 -> 1.4 (``async_migrate_entry``).
 
 The migration is a MINOR bump so a rollback build (schema 1.1, same major
 version) can still load a migrated entry. Entries here are real Home Assistant
@@ -131,11 +131,11 @@ def test_flow_keeps_major_version_one_and_declares_the_minor_bump():
     ``async_migrate_entry`` for a 1.1 entry at all.
     """
     assert TholzFairlandConfigFlow.VERSION == CONFIG_ENTRY_VERSION == 1
-    assert TholzFairlandConfigFlow.MINOR_VERSION == CONFIG_ENTRY_MINOR_VERSION == 3
+    assert TholzFairlandConfigFlow.MINOR_VERSION == CONFIG_ENTRY_MINOR_VERSION == 4
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("minor_version", [CONFIG_ENTRY_MINOR_VERSION, 4])
+@pytest.mark.parametrize("minor_version", [CONFIG_ENTRY_MINOR_VERSION, 5])
 async def test_current_or_newer_minor_version_is_left_untouched(minor_version):
     result, entry, updates = await _migrate(LEGACY_DATA, minor_version=minor_version)
 
@@ -161,7 +161,7 @@ async def test_update_bumps_only_the_minor_version_through_home_assistant():
     (update,) = updates
     assert set(update) == ACCEPTED_UPDATE_KEYS
     assert update["minor_version"] == CONFIG_ENTRY_MINOR_VERSION
-    assert (entry.version, entry.minor_version) == (1, 3)
+    assert (entry.version, entry.minor_version) == (1, 4)
     accepted = set(inspect.signature(ConfigEntries.async_update_entry).parameters)
     assert set(update) <= accepted
 
@@ -177,7 +177,7 @@ async def test_legacy_entry_with_only_a_current_token_gains_a_seed_and_mode():
         **LEGACY_DATA,
         CONF_COGNITO_CLIENT_SECRET_KEY: "",
         CONF_CREDENTIAL_SEED_REFRESH_TOKEN_KEY: "rt-live",
-        CONF_RECOVERY_MODE_KEY: RECOVERY_MODE_INTERACTIVE,
+        CONF_RECOVERY_MODE_KEY: RECOVERY_MODE_AUTOMATIC,
     }
     assert dict(entry.options) == {}
 
@@ -268,7 +268,7 @@ async def test_entry_without_any_token_migrates_without_inventing_one():
     assert result is True
     assert CONF_COGNITO_REFRESH_TOKEN_KEY not in entry.data
     assert CONF_CREDENTIAL_SEED_REFRESH_TOKEN_KEY not in entry.data
-    assert entry.data[CONF_RECOVERY_MODE_KEY] == RECOVERY_MODE_INTERACTIVE
+    assert entry.data[CONF_RECOVERY_MODE_KEY] == RECOVERY_MODE_AUTOMATIC
 
 
 @pytest.mark.asyncio
@@ -324,13 +324,16 @@ async def test_automatic_mode_with_a_password_is_kept():
     [
         pytest.param(RECOVERY_MODE_AUTOMATIC, None, id="automatic-without-password"),
         pytest.param(RECOVERY_MODE_AUTOMATIC, "", id="automatic-empty-password"),
+        pytest.param(
+            RECOVERY_MODE_AUTOMATIC, "   ", id="automatic-whitespace-password"
+        ),
         pytest.param(RECOVERY_MODE_INTERACTIVE, PASSWORD, id="interactive-stray"),
         pytest.param("bogus", PASSWORD, id="unknown-mode"),
         pytest.param(None, None, id="null-mode"),
         pytest.param(5, None, id="non-string-mode"),
     ],
 )
-async def test_inconsistent_recovery_settings_become_interactive_without_password(
+async def test_inconsistent_recovery_settings_become_automatic_without_stale_password(
     mode, password
 ):
     data = {**LEGACY_DATA, CONF_RECOVERY_MODE_KEY: mode}
@@ -339,18 +342,40 @@ async def test_inconsistent_recovery_settings_become_interactive_without_passwor
 
     _, entry, _ = await _migrate(data)
 
-    assert entry.data[CONF_RECOVERY_MODE_KEY] == RECOVERY_MODE_INTERACTIVE
+    assert entry.data[CONF_RECOVERY_MODE_KEY] == RECOVERY_MODE_AUTOMATIC
     assert CONF_COGNITO_PASSWORD_KEY not in entry.data
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("username", ["", None, 7])
+@pytest.mark.parametrize("username", ["", "   ", None, 7])
 async def test_unusable_username_is_dropped(username):
-    data = {**LEGACY_DATA, CONF_COGNITO_USERNAME_KEY: username}
+    data = {
+        **LEGACY_DATA,
+        CONF_COGNITO_USERNAME_KEY: username,
+        CONF_RECOVERY_MODE_KEY: RECOVERY_MODE_AUTOMATIC,
+        CONF_COGNITO_PASSWORD_KEY: PASSWORD,
+    }
 
     _, entry, _ = await _migrate(data)
 
     assert CONF_COGNITO_USERNAME_KEY not in entry.data
+    assert CONF_COGNITO_PASSWORD_KEY not in entry.data
+
+
+@pytest.mark.asyncio
+async def test_username_is_trimmed_without_changing_the_password():
+    password = " password-with-significant-spaces "
+    data = {
+        **LEGACY_DATA,
+        CONF_COGNITO_USERNAME_KEY: f"  {USERNAME}  ",
+        CONF_RECOVERY_MODE_KEY: RECOVERY_MODE_AUTOMATIC,
+        CONF_COGNITO_PASSWORD_KEY: password,
+    }
+
+    _, entry, _ = await _migrate(data)
+
+    assert entry.data[CONF_COGNITO_USERNAME_KEY] == USERNAME
+    assert entry.data[CONF_COGNITO_PASSWORD_KEY] == password
 
 
 @pytest.mark.asyncio
@@ -380,7 +405,7 @@ async def test_rerunning_the_migration_is_idempotent():
     assert dict(second.data) == dict(first.data)
     assert dict(second.options) == dict(first.options)
 
-    # ...and a 1.3 entry is never written again.
+    # ...and a 1.4 entry is never written again.
     hass = SimpleNamespace(config_entries=FakeConfigEntries())
     assert await async_migrate_entry(hass, first) is True
     assert hass.config_entries.updates == []
@@ -455,7 +480,7 @@ async def test_migrated_entry_stays_loadable_by_the_rollback_build(
     _, entry, _ = await _migrate(data, options)
     settings = {**entry.data, **entry.options}
 
-    # Same major version: Home Assistant hands a 1.3 entry to a 1.1 build.
+    # Same major version: Home Assistant hands a 1.4 entry to a 1.1 build.
     assert entry.version == CONFIG_ENTRY_VERSION
     # Keys the 1.1 build reads without a default are all still present.
     assert settings[CONF_COGNITO_USER_SUB_KEY]
@@ -465,4 +490,4 @@ async def test_migrated_entry_stays_loadable_by_the_rollback_build(
     # Both builds resolve the same live token and seed from the migrated entry.
     assert _baseline_credentials(settings) == expected
     assert _resolve_credentials(settings) == expected
-    assert _resolve_mode(settings) is RecoveryMode.INTERACTIVE
+    assert _resolve_mode(settings) is RecoveryMode.AUTOMATIC

@@ -19,4 +19,8 @@ Contributions are welcome through issues and pull requests.
 
 Never commit real credentials, account or device identifiers, Home Assistant storage, logs containing private data, or vendor application artifacts. Tests must use synthetic values and must not contact or control real equipment.
 
+Credential changes must follow the Home Assistant config-entry and reauthentication lifecycle. Validate new credentials before persisting them, mask password inputs, keep options free of credentials, and do not add custom encryption that requires an embedded or colocated decryption key.
+
+Report suspected vulnerabilities through the private process in [SECURITY.md](SECURITY.md), not through a public issue.
+
 By contributing, you agree that your changes are licensed under the MIT License.

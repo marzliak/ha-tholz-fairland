@@ -35,8 +35,6 @@ from .utils.const import (
     CONFIG_ENTRY_VERSION,
     DOMAIN,
     RECOVERY_MODE_AUTOMATIC,
-    RECOVERY_MODE_INTERACTIVE,
-    RECOVERY_MODES,
 )
 
 if TYPE_CHECKING:
@@ -93,12 +91,9 @@ def _resolve_credentials(settings: dict) -> tuple[str, str | None]:
     return live, seed
 
 
-def _resolve_mode(settings: dict) -> RecoveryMode:
-    """Read the recovery mode, defaulting to interactive when absent/unknown."""
-    raw = settings.get(CONF_RECOVERY_MODE_KEY, RECOVERY_MODE_INTERACTIVE)
-    if raw not in RECOVERY_MODES:
-        return RecoveryMode.INTERACTIVE
-    return RecoveryMode(raw)
+def _resolve_mode(_settings: dict) -> RecoveryMode:
+    """Return the single supported unattended recovery policy."""
+    return RecoveryMode.AUTOMATIC
 
 
 def _normalize(data: dict, options: dict) -> tuple[dict, dict]:
@@ -109,8 +104,10 @@ def _normalize(data: dict, options: dict) -> tuple[dict, dict]:
     is idempotent (``f(f(x)) == f(x)``). Credential-bearing keys are pulled out
     of options into data so a still-valid value can never be shadowed; the
     recovery seed is filled from the current token when missing; the recovery
-    mode defaults to interactive; a password is only kept in automatic mode and
-    is never invented. Unknown keys are preserved untouched.
+    mode is canonicalized to automatic. A password from an explicitly automatic
+    legacy entry is preserved; passwords attached to an old interactive or
+    malformed policy are removed so migration never opts a user in using stale
+    material. Unknown keys are preserved untouched.
     """
     data = dict(data)
     options = dict(options)
@@ -132,19 +129,22 @@ def _normalize(data: dict, options: dict) -> tuple[dict, dict]:
             data[CONF_CREDENTIAL_SEED_REFRESH_TOKEN_KEY] = current
 
     username = data.get(CONF_COGNITO_USERNAME_KEY)
-    if not (isinstance(username, str) and username):
+    if isinstance(username, str) and username.strip():
+        data[CONF_COGNITO_USERNAME_KEY] = username.strip()
+    else:
         data.pop(CONF_COGNITO_USERNAME_KEY, None)
 
     mode = data.get(CONF_RECOVERY_MODE_KEY)
     password = data.get(CONF_COGNITO_PASSWORD_KEY)
-    has_password = isinstance(password, str) and bool(password)
-    if mode == RECOVERY_MODE_AUTOMATIC and has_password:
-        data[CONF_RECOVERY_MODE_KEY] = RECOVERY_MODE_AUTOMATIC
+    has_username = CONF_COGNITO_USERNAME_KEY in data
+    has_password = isinstance(password, str) and bool(password.strip())
+    if mode == RECOVERY_MODE_AUTOMATIC and has_username and has_password:
+        pass
     else:
-        # No usable password, or an unknown mode: fall back to interactive and
-        # never leave a stray password behind.
-        data[CONF_RECOVERY_MODE_KEY] = RECOVERY_MODE_INTERACTIVE
+        # Do not adopt a password that belonged to a legacy interactive or
+        # malformed policy. Reauthentication will collect a fresh one.
         data.pop(CONF_COGNITO_PASSWORD_KEY, None)
+    data[CONF_RECOVERY_MODE_KEY] = RECOVERY_MODE_AUTOMATIC
 
     # Tholz 4.1.0 replaced the confidential app client with a public Cognito
     # client. Preserve the legacy key as empty for rollback parser compatibility,

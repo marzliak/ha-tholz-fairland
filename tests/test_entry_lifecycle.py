@@ -30,7 +30,9 @@ CLOUD_DATA = {
     "cognito_client_secret": "",
     "cognito_refresh_token": "live-token",
     "credential_seed_refresh_token": "seed-token",
-    "cognito_recovery_mode": "interactive",
+    "cognito_username": "person@example.test",
+    "cognito_password": "synthetic-password",
+    "cognito_recovery_mode": "automatic",
 }
 
 
@@ -310,7 +312,7 @@ def test_normalize_deshadows_credentials_out_of_options():
 def test_normalize_fills_seed_and_defaults_mode():
     new_data, _ = _normalize({"cognito_refresh_token": "tok"}, {})
     assert new_data["credential_seed_refresh_token"] == "tok"
-    assert new_data["cognito_recovery_mode"] == "interactive"
+    assert new_data["cognito_recovery_mode"] == "automatic"
 
 
 def test_normalize_drops_password_without_automatic_mode():
@@ -318,7 +320,7 @@ def test_normalize_drops_password_without_automatic_mode():
         {"cognito_refresh_token": "t", "cognito_password": "pw"}, {}
     )
     assert "cognito_password" not in new_data
-    assert new_data["cognito_recovery_mode"] == "interactive"
+    assert new_data["cognito_recovery_mode"] == "automatic"
 
 
 def test_normalize_is_idempotent():

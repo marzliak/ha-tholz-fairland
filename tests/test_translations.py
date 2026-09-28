@@ -11,15 +11,18 @@ import pytest
 from custom_components.tholz_fairland.config_flow import (
     ERR_CANNOT_CONNECT,
     ERR_INVALID_TOKEN,
+    ERR_NO_DEVICES,
     _cloud_schema,
+    _device_schema,
     _reauth_schema,
+    _reconfigure_schema,
 )
 
 COMPONENT = Path(__file__).parents[1] / "custom_components" / "tholz_fairland"
 STRINGS = COMPONENT / "strings.json"
 TRANSLATIONS = sorted((COMPONENT / "translations").glob("*.json"))
-# async_step_reauth only delegates, so it renders no form of its own.
-STEPS_WITHOUT_A_FORM = {"reauth"}
+# These methods delegate form rendering to a shared credential-step helper.
+STEPS_WITHOUT_A_FORM = {"reauth", "reauth_confirm", "reconfigure"}
 
 
 def _load(path: Path) -> dict:
@@ -50,6 +53,19 @@ def _declared_step_ids() -> set[str]:
     }
 
 
+def _abort_reasons() -> set[str]:
+    """Collect literal reasons passed to async_abort in the config flow."""
+    tree = ast.parse((COMPONENT / "config_flow.py").read_text(encoding="utf-8"))
+    return {
+        keyword.value.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and getattr(node.func, "attr", None) == "async_abort"
+        for keyword in node.keywords
+        if keyword.arg == "reason" and isinstance(keyword.value, ast.Constant)
+    }
+
+
 def _keys(schema) -> set[str]:
     return {marker.schema for marker in schema.schema}
 
@@ -77,13 +93,21 @@ def test_flow_error_keys_are_translated():
     errors = _load(STRINGS)["config"]["error"]
     assert ERR_CANNOT_CONNECT in errors
     assert ERR_INVALID_TOKEN in errors
+    assert ERR_NO_DEVICES in errors
+
+
+def test_every_abort_reason_is_translated():
+    abort = _load(STRINGS)["config"]["abort"]
+    assert _abort_reasons() <= set(abort)
 
 
 @pytest.mark.parametrize(
     ("step", "schema"),
     [
         ("user", _cloud_schema()),
+        ("select_device", _device_schema({"thing": "Pool heat pump"})),
         ("reauth_confirm", _reauth_schema()),
+        ("reconfigure", _reconfigure_schema({})),
     ],
 )
 def test_every_form_field_has_a_label(step, schema):

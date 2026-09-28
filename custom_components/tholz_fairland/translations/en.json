@@ -3,26 +3,20 @@
     "step": {
       "user": {
         "title": "Connect a Tholz Fairland heat pump",
-        "description": "Connects through the vendor cloud. Setup validates credentials and reads state without sending a device command. Automatic recovery stores the account password in Home Assistant and in any backup that includes this entry.",
+        "description": "Enter the account e-mail and password. Setup signs in, lists compatible heat pumps, and validates a read-only request before storing credentials. The password is kept in the Home Assistant entry and in backups that include it.",
         "data": {
           "name": "Name",
-          "cognito_user_sub": "Cloud user identifier",
-          "cognito_client_secret": "App client secret",
-          "cognito_refresh_token": "Refresh token",
-          "thing_id": "Device identifier",
           "cognito_username": "Account e-mail or username",
-          "cognito_recovery_mode": "Recovery mode",
-          "cognito_password": "Account password (automatic mode only)",
+          "cognito_password": "Account password",
           "polling_interval": "Polling interval (seconds)"
         }
       },
       "reauth_confirm": {
         "title": "Reauthenticate Tholz Fairland",
-        "description": "The stored cloud session is no longer valid. Sign in with the account e-mail and password to recover it.",
+        "description": "The stored cloud session is no longer valid. Sign in again; credentials are saved only after a valid device read.",
         "data": {
           "cognito_username": "Account e-mail or username",
-          "cognito_password": "Account password",
-          "cognito_recovery_mode": "Recovery mode"
+          "cognito_password": "Account password"
         }
       },
       "challenge": {
@@ -33,11 +27,18 @@
         }
       },
       "reconfigure": {
-        "title": "Change Fairland recovery mode",
-        "description": "Switch between automatic recovery (stores the account password) and interactive recovery. Leave the password blank to keep the stored one.",
+        "title": "Update Fairland credentials",
+        "description": "Enter the account e-mail and password again. Existing credentials are replaced only after successful authentication and a valid device read.",
         "data": {
-          "cognito_recovery_mode": "Recovery mode",
-          "cognito_password": "Account password (automatic mode only)"
+          "cognito_username": "Account e-mail or username",
+          "cognito_password": "Account password"
+        }
+      },
+      "select_device": {
+        "title": "Select the heat pump",
+        "description": "Choose the compatible heat pump to add.",
+        "data": {
+          "thing_id": "Heat pump"
         }
       }
     },
@@ -48,14 +49,16 @@
       "unsupported_challenge": "This account needs a sign-in step that cannot be completed here. Finish signing in with the vendor app, then try again.",
       "challenge_failed": "The verification value was not accepted. Try again.",
       "configuration_error": "The cloud configuration is incomplete or inconsistent.",
-      "missing_password": "Automatic recovery needs the account password.",
-      "wrong_account": "The account signed in does not match this device. Nothing was changed."
+      "wrong_account": "The account signed in does not match this device. Nothing was changed.",
+      "no_devices": "No compatible Fairland heat pump was found in this account."
     },
     "abort": {
       "already_configured": "This Fairland device is already configured.",
       "reauth_successful": "Reauthentication was successful.",
-      "reconfigure_successful": "Recovery mode updated.",
-      "reauth_unsuccessful": "Reauthentication was not completed."
+      "reconfigure_successful": "Credentials updated.",
+      "reauth_unsuccessful": "Reauthentication was not completed.",
+      "user_cancelled": "Setup was cancelled.",
+      "configuration_error": "The configuration flow lost required state. Start again."
     }
   },
   "options": {
@@ -75,16 +78,8 @@
       "unsupported_challenge": "This account needs a sign-in step that cannot be completed here. Finish signing in with the vendor app, then try again.",
       "challenge_failed": "The verification value was not accepted. Try again.",
       "configuration_error": "The cloud configuration is incomplete or inconsistent.",
-      "missing_password": "Automatic recovery needs the account password.",
-      "wrong_account": "The account signed in does not match this device. Nothing was changed."
-    }
-  },
-  "selector": {
-    "recovery_mode": {
-      "options": {
-        "automatic": "Automatic (store password, recover unattended)",
-        "interactive": "Interactive (ask for the password when needed)"
-      }
+      "wrong_account": "The account signed in does not match this device. Nothing was changed.",
+      "no_devices": "No compatible Fairland heat pump was found in this account."
     }
   }
 }

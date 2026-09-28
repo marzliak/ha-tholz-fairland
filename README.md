@@ -20,7 +20,7 @@ It presents the heat pump as a Home Assistant water heater and adds operating te
   - running state, connection state, and device error code
   - heating active time and duty cycle over the previous 24 hours
   - five schedule slots plus schedule diagnostics
-- Credential rotation handling and Home Assistant reauthentication
+- Account sign-in with device discovery, MFA/new-password challenges, automatic token recovery, and Home Assistant reauthentication
 - Safe command handling:
   - only operation mode, target temperature, and fan mode are writable
   - every command starts from a fresh reported-state baseline
@@ -33,17 +33,22 @@ The schedule is deliberately read-only.
 
 - Home Assistant 2025.2.4 or newer
 - A supported heat pump already linked to the Tholz cloud service
-- Cloud session values for the same account and device:
-  - cloud user identifier
-  - refresh token
-  - device identifier
+- The e-mail or username and password for that cloud account
 - Internet access from Home Assistant to the vendor's cloud and AWS services
 
 This integration supports only the cloud-connected Fairland/TurboSilence product family. Other Tholz controllers, lighting, auxiliary outputs, and switches are outside its scope. Installations of other Tholz integrations remain independent.
 
 ## Installation
 
-1. Download the repository.
+### HACS
+
+1. In HACS, add this repository as a custom repository in the **Integration** category.
+2. Install **Tholz Fairland**.
+3. Restart Home Assistant.
+
+### Manual
+
+1. Download a tagged release.
 2. Copy `custom_components/tholz_fairland` into your Home Assistant `custom_components` directory.
 3. Restart Home Assistant.
 
@@ -51,24 +56,14 @@ This integration supports only the cloud-connected Fairland/TurboSilence product
 
 1. Open **Settings → Devices & services → Add integration**.
 2. Search for **Tholz Fairland**.
-3. Enter a display name and the cloud session values for your account and device.
-4. Optionally provide the account e-mail and choose a **recovery mode**:
-   - **Interactive** (default): stores no password. When the cloud rejects the
-     stored session, Home Assistant asks you to sign in again.
-   - **Automatic**: also stores the account password so the integration can sign
-     in again on its own. This trades some secret exposure (see Privacy and
-     security) for unattended recovery.
-5. Choose a polling interval from 10–300 seconds. The default is 30 seconds.
+3. Enter a display name, the account e-mail or username, and the account password.
+4. Complete any verification-code or new-password challenge requested by the account.
+5. If the account has more than one compatible heat pump, select the device to add.
+6. Choose a polling interval from 10–300 seconds. The default is 30 seconds.
 
-Setup performs authentication and read-only state requests. It does not send a heat-pump command.
+Setup signs in, discovers compatible devices, and validates a read-only state request before it creates the entry. It does not send a heat-pump command.
 
-The device identifier is fixed after setup. The polling frequency can be changed
-under the integration's **Configure** action, and the recovery mode under
-**Reconfigure**. If the cloud rejects every stored token, Home Assistant opens a
-reauthentication flow that asks for the account e-mail and password (completing
-any multi-factor or new-password challenge the account requires); in automatic
-mode the same sign-in then runs unattended. Recovery reuses the existing entry,
-so devices, entities, dashboards, automations, and history are preserved.
+The device identifier is fixed after setup. Add another integration entry to manage another heat pump. The polling frequency can be changed under **Configure**, and credentials under **Reconfigure**. If the cloud rejects every stored token, the integration first attempts an unattended sign-in with the stored credentials. If the account requires user action or rejects the credentials, Home Assistant opens a reauthentication flow. Recovery reuses the existing entry, so devices, entities, dashboards, automations, and history are preserved.
 
 ## Entities
 
@@ -103,9 +98,9 @@ The example is optional, uses no custom cards, and can be adapted to the entity 
 
 ## Privacy and security
 
-Home Assistant stores the cloud user identifier, refresh token, recovery seed token, device identifier, account e-mail, and integration options in its config-entry storage. In **automatic** recovery mode it also stores the account **password**; in **interactive** mode it does not.
+Like established Home Assistant integrations that need reusable credentials, this integration stores the account username, password, refresh tokens, cloud user identifier, and device identifier in the config entry. This permits unattended session recovery. Home Assistant's password selector masks the value in the interface, but config-entry fields are not individually encrypted: `.storage` and backups that include the entry must be treated as sensitive.
 
-The password selector masks the value in the interface but does not encrypt it: in automatic mode the password is present in `.storage` and in any backup that includes this entry. Enable automatic mode only if you accept that exposure. Switch back to interactive mode at any time under **Reconfigure**, which removes the stored password; a rollback to an earlier build leaves the stored password in place until you reconfigure or restore a clean backup.
+The integration does not add a private encryption layer around config-entry fields. Such a layer would still need a runtime decryption key and would not improve the normal Home Assistant host-and-backup trust model. Protect the Home Assistant host, restrict access to its configuration directory, encrypt and control backups, and rotate the cloud password if either is exposed.
 
 This integration never writes credentials, tokens, SRP values, `SECRET_HASH`, authorization headers, or Cognito challenge sessions to logs, diagnostics, or error messages, and it does not enable debug logging for any third-party library. Challenge sessions exist only in flow memory and are discarded when the flow ends.
 
@@ -113,13 +108,13 @@ One caveat outside the integration's control: the AWS SDK (`botocore`) logs full
 
 At runtime it sends credentials and device data only to the vendor-operated authentication, device, metrics, custom-authorizer, and messaging services required for the integration. Metrics and schedule data remain read-only. No analytics or telemetry are sent to this project's maintainers.
 
-Protect Home Assistant backups because they can contain config-entry credentials, including the password in automatic mode. Remove the integration and change the account password if the Home Assistant installation or a backup is exposed.
+Remove the integration and change the account password if the Home Assistant installation or a backup is exposed.
 
 ## Limitations
 
 - Cloud access is mandatory; there is no local fallback.
 - Vendor outages, account changes, rate limits, or interface changes can make entities unavailable.
-- Initial setup requires session values that the vendor app does not currently expose as a Home Assistant-friendly login flow.
+- The account password is retained for unattended recovery; protect Home Assistant storage and backups accordingly.
 - Schedules can be viewed but not edited.
 - Only the documented Fairland/TurboSilence mode, setpoint, and fan controls are supported.
 - A failed command can leave the device unavailable even after rollback is attempted. Verify the physical equipment if Home Assistant reports an error.

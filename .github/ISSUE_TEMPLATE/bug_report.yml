@@ -1,0 +1,61 @@
+name: Bug report
+description: Report a reproducible integration defect
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include passwords, tokens, account/device identifiers, `.storage`, backups, or unsanitized logs. Use private vulnerability reporting for security issues.
+  - type: input
+    id: integration_version
+    attributes:
+      label: Integration version
+      placeholder: 0.3.0
+    validations:
+      required: true
+  - type: input
+    id: home_assistant_version
+    attributes:
+      label: Home Assistant version
+      placeholder: 2026.9.4
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Setup or device discovery
+        - Authentication or reauthentication
+        - Entity state or availability
+        - Heat-pump command
+        - Schedule or metrics
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs
+      description: Remove all credentials, tokens, account identifiers, device identifiers, MQTT topics/signatures, and private network details.
+      render: text

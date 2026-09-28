@@ -14,8 +14,11 @@ DOMAIN = "tholz_fairland"
 #   1.3: switches to the app's public Cognito client introduced in Tholz 4.1.0;
 #        the legacy client-secret key is retained as an empty string so rollback
 #        builds can still parse the entry without retaining an obsolete secret.
+#   1.4: automatic recovery becomes the only supported policy. Legacy interactive
+#        entries keep working with their refresh token and request reauthentication
+#        when a fresh password is required.
 CONFIG_ENTRY_VERSION = 1
-CONFIG_ENTRY_MINOR_VERSION = 3
+CONFIG_ENTRY_MINOR_VERSION = 4
 
 CONF_NAME_KEY = "name"
 CONF_POLLING_INTERVAL_KEY = "polling_interval"
@@ -33,8 +36,8 @@ CONF_THING_ID_KEY = "thing_id"
 # cognito_user_sub, which the refresh grant's SECRET_HASH is computed against;
 # neither may ever be inferred from the other.
 CONF_COGNITO_USERNAME_KEY = "cognito_username"
-# Only present in automatic mode. Stored in the config entry (and therefore any
-# backup that includes it) so recovery can run unattended.
+# Stored in the config entry (and therefore any backup that includes it) so the
+# single supported automatic policy can recover unattended.
 CONF_COGNITO_PASSWORD_KEY = "cognito_password"  # noqa: S105
 CONF_RECOVERY_MODE_KEY = "cognito_recovery_mode"
 

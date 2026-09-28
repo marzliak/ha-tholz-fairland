@@ -3,26 +3,20 @@
     "step": {
       "user": {
         "title": "Conectar uma bomba de calor Tholz Fairland",
-        "description": "Conecta pela nuvem do fabricante. A configuração valida as credenciais e lê o estado sem enviar comando ao equipamento. A recuperação automática armazena a senha da conta no Home Assistant e em qualquer backup que inclua esta entrada.",
+        "description": "Informe o e-mail e a senha da conta. A configuração autentica, lista as bombas compatíveis e valida uma leitura antes de armazenar as credenciais. A senha fica na entrada do Home Assistant e nos backups que a incluam.",
         "data": {
           "name": "Nome",
-          "cognito_user_sub": "Identificador do usuário na nuvem",
-          "cognito_client_secret": "Segredo do app client",
-          "cognito_refresh_token": "Refresh token",
-          "thing_id": "Identificador do dispositivo",
           "cognito_username": "E-mail ou usuário da conta",
-          "cognito_recovery_mode": "Modo de recuperação",
-          "cognito_password": "Senha da conta (apenas no modo automático)",
+          "cognito_password": "Senha da conta",
           "polling_interval": "Intervalo de atualização (segundos)"
         }
       },
       "reauth_confirm": {
         "title": "Reautenticar Tholz Fairland",
-        "description": "A sessão armazenada na nuvem não é mais válida. Entre com o e-mail e a senha da conta para recuperá-la.",
+        "description": "A sessão da nuvem não é mais válida. Entre novamente; as novas credenciais só serão salvas após uma leitura válida do dispositivo.",
         "data": {
           "cognito_username": "E-mail ou usuário da conta",
-          "cognito_password": "Senha da conta",
-          "cognito_recovery_mode": "Modo de recuperação"
+          "cognito_password": "Senha da conta"
         }
       },
       "challenge": {
@@ -33,11 +27,18 @@
         }
       },
       "reconfigure": {
-        "title": "Alterar o modo de recuperação Fairland",
-        "description": "Alterna entre recuperação automática (armazena a senha da conta) e interativa. Deixe a senha em branco para manter a já armazenada.",
+        "title": "Atualizar as credenciais Fairland",
+        "description": "Informe novamente o e-mail e a senha. As credenciais atuais serão substituídas somente após autenticação e leitura válidas.",
         "data": {
-          "cognito_recovery_mode": "Modo de recuperação",
-          "cognito_password": "Senha da conta (apenas no modo automático)"
+          "cognito_username": "E-mail ou usuário da conta",
+          "cognito_password": "Senha da conta"
+        }
+      },
+      "select_device": {
+        "title": "Selecionar a bomba de calor",
+        "description": "Escolha a bomba compatível que será adicionada.",
+        "data": {
+          "thing_id": "Bomba de calor"
         }
       }
     },
@@ -48,14 +49,16 @@
       "unsupported_challenge": "Esta conta exige uma etapa de login que não pode ser concluída aqui. Finalize o login no app do fabricante e tente novamente.",
       "challenge_failed": "O valor de verificação não foi aceito. Tente novamente.",
       "configuration_error": "A configuração da nuvem está incompleta ou inconsistente.",
-      "missing_password": "A recuperação automática precisa da senha da conta.",
-      "wrong_account": "A conta autenticada não corresponde a este dispositivo. Nada foi alterado."
+      "wrong_account": "A conta autenticada não corresponde a este dispositivo. Nada foi alterado.",
+      "no_devices": "Nenhuma bomba de calor Fairland compatível foi encontrada nesta conta."
     },
     "abort": {
       "already_configured": "Este dispositivo Fairland já está configurado.",
       "reauth_successful": "A reautenticação foi concluída com sucesso.",
-      "reconfigure_successful": "Modo de recuperação atualizado.",
-      "reauth_unsuccessful": "A reautenticação não foi concluída."
+      "reconfigure_successful": "Credenciais atualizadas.",
+      "reauth_unsuccessful": "A reautenticação não foi concluída.",
+      "user_cancelled": "A configuração foi cancelada.",
+      "configuration_error": "O fluxo de configuração perdeu o estado necessário. Inicie novamente."
     }
   },
   "options": {
@@ -75,16 +78,8 @@
       "unsupported_challenge": "Esta conta exige uma etapa de login que não pode ser concluída aqui. Finalize o login no app do fabricante e tente novamente.",
       "challenge_failed": "O valor de verificação não foi aceito. Tente novamente.",
       "configuration_error": "A configuração da nuvem está incompleta ou inconsistente.",
-      "missing_password": "A recuperação automática precisa da senha da conta.",
-      "wrong_account": "A conta autenticada não corresponde a este dispositivo. Nada foi alterado."
-    }
-  },
-  "selector": {
-    "recovery_mode": {
-      "options": {
-        "automatic": "Automático (armazenar senha, recuperar sem intervenção)",
-        "interactive": "Interativo (pedir a senha quando necessário)"
-      }
+      "wrong_account": "A conta autenticada não corresponde a este dispositivo. Nada foi alterado.",
+      "no_devices": "Nenhuma bomba de calor Fairland compatível foi encontrada nesta conta."
     }
   }
 }
