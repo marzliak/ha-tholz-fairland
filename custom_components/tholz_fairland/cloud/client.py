@@ -7,14 +7,14 @@ import json
 import logging
 import threading
 import time
+import urllib.parse
 import uuid
 from contextlib import suppress
-from datetime import UTC, datetime
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-import boto3
 import requests
-from awscrt import auth, mqtt
+from awscrt import mqtt
 from awsiot import mqtt_connection_builder
 
 from .auth_manager import FairlandAuthManager, RecoveryMode
@@ -36,11 +36,8 @@ _LOGGER = logging.getLogger(__name__)
 REGION = "us-east-1"
 USER_POOL_ID = "us-east-1_JA4N5tQGy"
 USER_POOL_CLIENT_ID = "4crf9di2so4tfe0cjn7lndci3j"
-IDENTITY_POOL_ID = "us-east-1:cfacf737-46a3-4393-a88b-ad4a493830c3"
-LOGINS_KEY = f"cognito-idp.{REGION}.amazonaws.com/{USER_POOL_ID}"
-ATTACH_URL = (
-    "https://n1owhaiarj.execute-api.us-east-1.amazonaws.com/master/iot-attach-policy"
-)
+API_BASE_URL = "https://n1owhaiarj.execute-api.us-east-1.amazonaws.com/master"
+IOT_AUTHORIZER_URL = f"{API_BASE_URL}/iot/authorizer"
 METRICS_URL = "https://n1owhaiarj.execute-api.us-east-1.amazonaws.com/master/metrics"
 IOT_ENDPOINT = "a20gdo93r3ncps-ats.iot.us-east-1.amazonaws.com"
 METRICS_WINDOW_SECONDS = 24 * 60 * 60
@@ -57,8 +54,9 @@ VALID_OPERATION_MODES = frozenset({0, 2, 4, 5})
 VALID_FAN_MODES = frozenset({0, 1})
 MIN_SETPOINT = 120
 MAX_SETPOINT = 400
-MILLISECONDS_EPOCH_THRESHOLD = 10_000_000_000
 HTTP_OK = 200
+HTTP_UNAUTHORIZED = 401
+HTTP_FORBIDDEN = 403
 
 ERR_WRITE_PATH = "cloud writes must target heatings.heat0"
 ERR_INTEGER_FIELD = "writable Fairland fields must be integers"
@@ -67,8 +65,7 @@ ERR_FAN_MODE = "unsupported Fairland fan mode"
 ERR_SETPOINT = "setpoint must be between 12 and 40 °C"
 ERR_NO_CHANGES = "payload contains no changed writable fields"
 ERR_COGNITO_REFRESH = "unable to refresh Cognito session"
-ERR_POLICY_ATTACH = "IoT policy attachment was rejected"
-ERR_AWS_CREDENTIALS = "unable to obtain AWS IoT credentials"
+ERR_IOT_AUTHORIZER = "unable to obtain the AWS IoT authorizer"
 ERR_MQTT_CONNECT = "unable to connect to AWS IoT"
 ERR_GET_PUBLISH = "shadow GET publish failed"
 ERR_GET_TIMEOUT = "shadow GET timed out"
@@ -94,6 +91,14 @@ class FairlandCloudAuthError(FairlandCloudError):
 
 class FairlandCloudProtocolError(FairlandCloudError):
     """The cloud response did not match the verified protocol."""
+
+
+@dataclass(frozen=True, slots=True)
+class IotAuthorizer:
+    """Short-lived custom-authorizer material returned by the Tholz API."""
+
+    name: str
+    signature: str = field(repr=False)
 
 
 def extract_mutable_changes(
@@ -252,10 +257,12 @@ class FairlandCloudClient:
             )
         self._auth = auth_manager
 
-        self._credentials: dict[str, Any] | None = None
-        self._credentials_expiry = 0.0
+        self._connection_expiry = 0.0
         self._connection = None
+        self._connecting_connection = None
         self._connection_interrupted = False
+        self._interrupted_connection_ids: set[int] = set()
+        self._connection_state_lock = threading.Lock()
         self._lock = threading.RLock()
 
         self._get_event = threading.Event()
@@ -315,64 +322,77 @@ class FairlandCloudClient:
         """Expiry (UTC epoch) of the currently valid Cognito id token, if any."""
         return self._auth.id_token_expiry
 
-    @staticmethod
-    def _expiry_epoch(value: Any) -> float:
-        if isinstance(value, datetime):
-            if value.tzinfo is None:
-                value = value.replace(tzinfo=UTC)
-            return value.timestamp()
-        if isinstance(value, (int, float)):
-            return (
-                float(value) / 1000
-                if value > MILLISECONDS_EPOCH_THRESHOLD
-                else float(value)
-            )
-        return 0.0
-
-    def _refresh_aws_credentials(self) -> dict[str, Any]:
-        if self._credentials and self._credentials_expiry > time.time() + 120:
-            return self._credentials
-
-        # A valid id token has already been obtained; any failure past this
-        # point is an AWS Identity/IoT service problem, not a rejected
-        # credential. It must surface as a retry-later (non-auth) error so setup
-        # maps it to ConfigEntryNotReady instead of prompting reauthentication.
-        id_token = self._id_token()
-        logins = {LOGINS_KEY: id_token}
-        identity = boto3.client("cognito-identity", region_name=REGION)
+    def _fetch_iot_authorizer(self, id_token: str) -> IotAuthorizer:
+        """Fetch the custom-authorizer name/signature used by Tholz 4.1+."""
         try:
-            identity_id = identity.get_id(
-                IdentityPoolId=IDENTITY_POOL_ID,
-                Logins=logins,
-            )["IdentityId"]
-            response = requests.post(
-                ATTACH_URL,
-                headers={
-                    "Authorization": f"Bearer {id_token}",
-                    "Content-Type": "application/json",
-                },
-                json={"target": identity_id},
+            response = requests.get(
+                IOT_AUTHORIZER_URL,
+                headers={"Authorization": id_token},
                 timeout=self._timeout,
             )
-        except Exception:
-            raise FairlandCloudProtocolError(ERR_AWS_CREDENTIALS) from None
+        except requests.RequestException as exc:
+            raise FairlandCloudError(ERR_IOT_AUTHORIZER) from exc
+        if response.status_code in {HTTP_UNAUTHORIZED, HTTP_FORBIDDEN}:
+            self._auth.report_authorization_rejected()
+            raise FairlandCloudAuthError(ERR_IOT_AUTHORIZER)
         if response.status_code != HTTP_OK:
-            raise FairlandCloudProtocolError(ERR_POLICY_ATTACH)
+            raise FairlandCloudProtocolError(ERR_IOT_AUTHORIZER)
         try:
-            credentials = identity.get_credentials_for_identity(
-                IdentityId=identity_id,
-                Logins=logins,
-            )["Credentials"]
-        except Exception:
-            raise FairlandCloudProtocolError(ERR_AWS_CREDENTIALS) from None
+            document = response.json()
+        except requests.JSONDecodeError as exc:
+            raise FairlandCloudProtocolError(ERR_IOT_AUTHORIZER) from exc
+        if not isinstance(document, dict):
+            raise FairlandCloudProtocolError(ERR_IOT_AUTHORIZER)
+        name = document.get("authorizer")
+        signature = document.get("signature")
+        if (
+            not isinstance(name, str)
+            or not name
+            or not isinstance(signature, str)
+            or not signature
+        ):
+            raise FairlandCloudProtocolError(ERR_IOT_AUTHORIZER)
+        return IotAuthorizer(name=name, signature=signature)
 
-        self._credentials = credentials
-        self._credentials_expiry = self._expiry_epoch(credentials.get("Expiration"))
-        return credentials
+    def _mqtt_query(
+        self, id_token: str, authorizer: IotAuthorizer, expires_at: float
+    ) -> str:
+        """Build the exact query-string protocol used by Tholz 4.1 build 93."""
+        disconnect_after = max(1, int(expires_at - time.time()))
+        return urllib.parse.urlencode(
+            {
+                "x-amz-customauthorizer-name": authorizer.name,
+                "x-amz-customauthorizer-signature": authorizer.signature,
+                "token": id_token,
+                "thingIds": self.thing_id,
+                "disconnectAfterInSeconds": str(disconnect_after),
+            },
+            quote_via=urllib.parse.quote,
+        )
 
-    def _on_interrupted(self, _connection, error, **_kwargs) -> None:
-        self._connection_interrupted = True
-        _LOGGER.warning("Tholz Fairland cloud MQTT connection interrupted: %s", error)
+    def _on_interrupted(self, connection, error, **_kwargs) -> None:
+        with self._connection_state_lock:
+            if (
+                connection is self._connection
+                or connection is self._connecting_connection
+            ):
+                self._interrupted_connection_ids.add(id(connection))
+            if connection is self._connection:
+                self._connection_interrupted = True
+                self._connection_expiry = 0.0
+        # The CRT client automatically reconnects with the same WebSocket
+        # transform. That would replay an expiring ID token and authorizer
+        # signature, and clean_session=True would lose subscriptions. Stop that
+        # reconnect loop; the next serialized operation creates a fresh
+        # connection, handshake, client ID and all four subscriptions.
+        with suppress(Exception):
+            connection.disconnect()
+        error_name = type(error).__name__
+        _LOGGER.warning(
+            "Tholz Fairland cloud MQTT connection interrupted (%s); "
+            "a fresh authenticated connection will be created",
+            error_name,
+        )
 
     def _on_message(self, topic: str, payload: bytes, **_kwargs) -> None:
         try:
@@ -417,8 +437,12 @@ class FairlandCloudClient:
         self._state_change_callback = callback
 
     def _disconnect(self) -> None:
-        connection, self._connection = self._connection, None
-        self._connection_interrupted = False
+        with self._connection_state_lock:
+            connection, self._connection = self._connection, None
+            self._connection_interrupted = False
+            self._connection_expiry = 0.0
+            if connection is not None:
+                self._interrupted_connection_ids.discard(id(connection))
         if connection is not None:
             try:
                 connection.disconnect().result(timeout=min(self._timeout, 8))
@@ -430,30 +454,58 @@ class FairlandCloudClient:
         with self._lock:
             self._disconnect()
 
+    def _activate_connection(self, connection, expires_at: float) -> None:
+        """Publish a fully subscribed connection only if no callback invalidated it."""
+        with self._connection_state_lock:
+            if (
+                self._connecting_connection is not connection
+                or id(connection) in self._interrupted_connection_ids
+            ):
+                raise FairlandCloudProtocolError(ERR_MQTT_CONNECT)
+            self._connection = connection
+            self._connection_expiry = expires_at
+            self._connection_interrupted = False
+            self._connecting_connection = None
+            self._interrupted_connection_ids.discard(id(connection))
+
     def _ensure_connection(self) -> None:
-        if (
-            self._connection is not None
-            and not self._connection_interrupted
-            and self._credentials_expiry > time.time() + 120
-        ):
-            return
+        with self._connection_state_lock:
+            if (
+                self._connection is not None
+                and not self._connection_interrupted
+                and self._connection_expiry > time.time() + 120
+            ):
+                return
 
         self._disconnect()
-        credentials = self._refresh_aws_credentials()
-        provider = auth.AwsCredentialsProvider.new_static(
-            credentials["AccessKeyId"],
-            credentials["SecretKey"],
-            credentials["SessionToken"],
-        )
-        connection = mqtt_connection_builder.websockets_with_default_aws_signing(
+        id_token = self._id_token()
+        expires_at = self.id_token_expiry
+        if expires_at is None or expires_at <= time.time() + 120:
+            raise FairlandCloudProtocolError(ERR_IOT_AUTHORIZER)
+        authorizer = self._fetch_iot_authorizer(id_token)
+        query = self._mqtt_query(id_token, authorizer, expires_at)
+
+        def _transform_handshake(transform_args, **_kwargs) -> None:
+            try:
+                transform_args.http_request.path = f"/mqtt?{query}"
+                transform_args.set_done()
+            except Exception as exc:
+                transform_args.set_done(exc)
+
+        user_sub = self._auth.user_sub
+        if not user_sub:
+            raise FairlandCloudProtocolError(ERR_IOT_AUTHORIZER)
+        connection = mqtt_connection_builder.websockets_with_custom_handshake(
+            websocket_handshake_transform=_transform_handshake,
             endpoint=IOT_ENDPOINT,
-            region=REGION,
-            credentials_provider=provider,
-            client_id=f"tholz-ha-{uuid.uuid4().hex[:10]}",
+            client_id=f"#tholz-app_{user_sub}_primary_{int(time.time() * 1000)}",
             clean_session=True,
             keep_alive_secs=30,
             on_connection_interrupted=self._on_interrupted,
         )
+        with self._connection_state_lock:
+            self._connecting_connection = connection
+            self._interrupted_connection_ids.discard(id(connection))
         try:
             connection.connect().result(timeout=self._timeout)
             connection.subscribe(
@@ -476,13 +528,15 @@ class FairlandCloudClient:
                 qos=mqtt.QoS.AT_LEAST_ONCE,
                 callback=self._on_message,
             )[0].result(timeout=self._timeout)
+            self._activate_connection(connection, expires_at)
         except Exception as exc:
+            with self._connection_state_lock:
+                if self._connecting_connection is connection:
+                    self._connecting_connection = None
+                self._interrupted_connection_ids.discard(id(connection))
             with suppress(Exception):
                 connection.disconnect().result(timeout=min(self._timeout, 8))
             raise FairlandCloudProtocolError(ERR_MQTT_CONNECT) from exc
-
-        self._connection = connection
-        self._connection_interrupted = False
 
     def _request_shadow(self) -> dict[str, Any]:
         self._ensure_connection()
@@ -570,6 +624,9 @@ class FairlandCloudClient:
         except requests.RequestException as exc:
             raise FairlandCloudProtocolError(ERR_METRICS_RESPONSE) from exc
         if response.status_code != HTTP_OK:
+            if response.status_code in {HTTP_UNAUTHORIZED, HTTP_FORBIDDEN}:
+                self._auth.report_authorization_rejected()
+                raise FairlandCloudAuthError(ERR_METRICS_RESPONSE)
             raise FairlandCloudProtocolError(ERR_METRICS_RESPONSE)
         raw = response.content
         try:
@@ -597,6 +654,8 @@ class FairlandCloudClient:
             reported = dict(self._reported(self._request_shadow()))
             try:
                 reported["metricsSummary"] = self._get_metrics_summary()
+            except FairlandCloudAuthError:
+                raise
             except FairlandCloudError as exc:
                 _LOGGER.warning(
                     "Unable to refresh Tholz Fairland cloud metrics: %s", exc

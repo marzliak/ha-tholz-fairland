@@ -1,10 +1,16 @@
 import json
+import urllib.parse
+from types import SimpleNamespace
 
 import pytest
 
+from custom_components.tholz_fairland.cloud import client as client_module
 from custom_components.tholz_fairland.cloud.client import (
+    FairlandCloudAuthError,
     FairlandCloudClient,
+    FairlandCloudError,
     FairlandCloudProtocolError,
+    IotAuthorizer,
     build_shadow_update,
     extract_mutable_changes,
     normalize_schedule_document,
@@ -46,6 +52,372 @@ SCHEDULE_DOCUMENT = {
         }
     },
 }
+
+
+class _CompletedFuture:
+    def result(self, timeout=None):
+        del timeout
+
+
+class _FakeConnection:
+    def __init__(self):
+        self.subscriptions = []
+        self.disconnected = False
+
+    def connect(self):
+        return _CompletedFuture()
+
+    def subscribe(self, *, topic, qos, callback):
+        self.subscriptions.append((topic, qos, callback))
+        return _CompletedFuture(), 1
+
+    def disconnect(self):
+        self.disconnected = True
+        return _CompletedFuture()
+
+
+class _FakeAuthManager:
+    id_token_expiry = 1_600.0
+    user_sub = "subject-123"
+
+    def __init__(self):
+        self.authorization_rejected = 0
+
+    @staticmethod
+    def get_valid_id_token():
+        return "id-token"
+
+    def report_authorization_rejected(self):
+        self.authorization_rejected += 1
+
+
+def test_iot_authorizer_uses_raw_id_token_header(monkeypatch):
+    calls = []
+
+    class Response:
+        status_code = 200
+
+        @staticmethod
+        def json():
+            return {"authorizer": "fairland-authorizer", "signature": "sig+/="}
+
+    def fake_get(url, *, headers, timeout):
+        calls.append((url, headers, timeout))
+        return Response()
+
+    monkeypatch.setattr(client_module.requests, "get", fake_get)
+    client = FairlandCloudClient(thing_id="thing", auth_manager=_FakeAuthManager())
+
+    result = client._fetch_iot_authorizer("id-token")
+
+    assert result == IotAuthorizer("fairland-authorizer", "sig+/=")
+    assert calls == [
+        (
+            client_module.IOT_AUTHORIZER_URL,
+            {"Authorization": "id-token"},
+            15.0,
+        )
+    ]
+
+
+@pytest.mark.parametrize("status_code", [401, 403])
+def test_iot_authorizer_rejection_invalidates_auth_and_requests_reauth(
+    monkeypatch, status_code
+):
+    class Response:
+        def __init__(self):
+            self.status_code = status_code
+
+    monkeypatch.setattr(
+        client_module.requests, "get", lambda *_args, **_kwargs: Response()
+    )
+    auth_manager = _FakeAuthManager()
+    client = FairlandCloudClient(thing_id="thing", auth_manager=auth_manager)
+
+    with pytest.raises(FairlandCloudAuthError):
+        client._fetch_iot_authorizer("id-token")
+
+    assert auth_manager.authorization_rejected == 1
+
+
+def test_iot_authorizer_server_error_is_retryable_protocol_failure(monkeypatch):
+    class Response:
+        status_code = 503
+
+    monkeypatch.setattr(
+        client_module.requests, "get", lambda *_args, **_kwargs: Response()
+    )
+    auth_manager = _FakeAuthManager()
+    client = FairlandCloudClient(thing_id="thing", auth_manager=auth_manager)
+
+    with pytest.raises(FairlandCloudProtocolError):
+        client._fetch_iot_authorizer("id-token")
+
+    assert auth_manager.authorization_rejected == 0
+
+
+def test_iot_authorizer_signature_is_redacted_from_repr():
+    signature = "sensitive-signature"
+
+    rendered = repr(IotAuthorizer("authorizer", signature))
+
+    assert "authorizer" in rendered
+    assert signature not in rendered
+
+
+@pytest.mark.parametrize(
+    "document",
+    [None, {}, {"authorizer": "name"}, {"signature": "signature"}],
+)
+def test_iot_authorizer_rejects_invalid_response(monkeypatch, document):
+    class Response:
+        status_code = 200
+
+        @staticmethod
+        def json():
+            return document
+
+    monkeypatch.setattr(
+        client_module.requests, "get", lambda *_args, **_kwargs: Response()
+    )
+    client = FairlandCloudClient(thing_id="thing", auth_manager=_FakeAuthManager())
+
+    with pytest.raises(FairlandCloudProtocolError):
+        client._fetch_iot_authorizer("id-token")
+
+
+def test_iot_authorizer_network_failure_is_retryable(monkeypatch):
+    offline = "offline"
+
+    def fail(*_args, **_kwargs):
+        raise client_module.requests.ConnectionError(offline)
+
+    monkeypatch.setattr(client_module.requests, "get", fail)
+    client = FairlandCloudClient(thing_id="thing", auth_manager=_FakeAuthManager())
+
+    with pytest.raises(FairlandCloudError):
+        client._fetch_iot_authorizer("id-token")
+
+
+def test_mqtt_query_matches_tholz_41_protocol(monkeypatch):
+    monkeypatch.setattr(client_module.time, "time", lambda: 1_000.0)
+    client = FairlandCloudClient(
+        thing_id="thing/with space", auth_manager=_FakeAuthManager()
+    )
+
+    query = client._mqtt_query(
+        "id.token/value", IotAuthorizer("auth name", "sig+/="), 1_600.0
+    )
+
+    assert urllib.parse.parse_qs(query, strict_parsing=True) == {
+        "x-amz-customauthorizer-name": ["auth name"],
+        "x-amz-customauthorizer-signature": ["sig+/="],
+        "token": ["id.token/value"],
+        "thingIds": ["thing/with space"],
+        "disconnectAfterInSeconds": ["600"],
+    }
+
+
+def test_connection_uses_custom_authorizer_websocket(monkeypatch):
+    monkeypatch.setattr(client_module.time, "time", lambda: 1_000.0)
+    fake_connection = _FakeConnection()
+    builder_calls = []
+
+    def fake_builder(**kwargs):
+        builder_calls.append(kwargs)
+        return fake_connection
+
+    monkeypatch.setattr(
+        client_module.mqtt_connection_builder,
+        "websockets_with_custom_handshake",
+        fake_builder,
+    )
+    client = FairlandCloudClient(thing_id="thing", auth_manager=_FakeAuthManager())
+    monkeypatch.setattr(
+        client,
+        "_fetch_iot_authorizer",
+        lambda _token: IotAuthorizer("authorizer", "signature"),
+    )
+
+    client._ensure_connection()
+
+    assert len(builder_calls) == 1
+    kwargs = builder_calls[0]
+    assert kwargs["endpoint"] == client_module.IOT_ENDPOINT
+    assert kwargs["client_id"] == "#tholz-app_subject-123_primary_1000000"
+    assert len(fake_connection.subscriptions) == 4
+    done = []
+    request = SimpleNamespace(path="/mqtt")
+    transform_args = SimpleNamespace(
+        http_request=request,
+        set_done=lambda error=None: done.append(error),
+    )
+    kwargs["websocket_handshake_transform"](transform_args)
+    assert done == [None]
+    assert request.path.startswith("/mqtt?")
+    parsed_query = urllib.parse.parse_qs(request.path.split("?", 1)[1])
+    assert parsed_query["token"] == ["id-token"]
+    assert parsed_query["thingIds"] == ["thing"]
+    assert parsed_query["disconnectAfterInSeconds"] == ["600"]
+
+
+def test_interruption_stops_stale_reconnect_and_redacts_error(caplog):
+    connection = _FakeConnection()
+    client = FairlandCloudClient(thing_id="thing", auth_manager=_FakeAuthManager())
+    client._connection = connection
+    client._connection_expiry = 1_600.0
+    secret = "token-must-not-be-logged"
+
+    with caplog.at_level("WARNING"):
+        client._on_interrupted(connection, RuntimeError(secret))
+
+    assert connection.disconnected is True
+    assert client._connection_interrupted is True
+    assert client._connection_expiry == 0.0
+    assert secret not in caplog.text
+    assert "RuntimeError" in caplog.text
+
+
+def test_interrupted_connection_is_rebuilt_with_fresh_subscriptions(monkeypatch):
+    monkeypatch.setattr(client_module.time, "time", lambda: 1_000.0)
+    stale_connection = _FakeConnection()
+    fresh_connection = _FakeConnection()
+    builder_calls = []
+
+    def fake_builder(**kwargs):
+        builder_calls.append(kwargs)
+        return fresh_connection
+
+    monkeypatch.setattr(
+        client_module.mqtt_connection_builder,
+        "websockets_with_custom_handshake",
+        fake_builder,
+    )
+    client = FairlandCloudClient(thing_id="thing", auth_manager=_FakeAuthManager())
+    client._connection = stale_connection
+    client._connection_expiry = 1_600.0
+    client._connection_interrupted = True
+    monkeypatch.setattr(
+        client,
+        "_fetch_iot_authorizer",
+        lambda _token: IotAuthorizer("new-authorizer", "new-signature"),
+    )
+
+    client._ensure_connection()
+
+    assert stale_connection.disconnected is True
+    assert client._connection is fresh_connection
+    assert client._connection_interrupted is False
+    assert len(builder_calls) == 1
+    assert len(fresh_connection.subscriptions) == 4
+
+
+def test_interruption_during_last_subscription_is_never_published(monkeypatch):
+    monkeypatch.setattr(client_module.time, "time", lambda: 1_000.0)
+
+    class InterruptingConnection(_FakeConnection):
+        def __init__(self, callback):
+            super().__init__()
+            self._callback = callback
+
+        def subscribe(self, *, topic, qos, callback):
+            result = super().subscribe(topic=topic, qos=qos, callback=callback)
+            if len(self.subscriptions) == 4:
+                self._callback(self, RuntimeError("synthetic interruption"))
+            return result
+
+    connection_holder = {}
+
+    def fake_builder(**kwargs):
+        connection = InterruptingConnection(kwargs["on_connection_interrupted"])
+        connection_holder["connection"] = connection
+        return connection
+
+    monkeypatch.setattr(
+        client_module.mqtt_connection_builder,
+        "websockets_with_custom_handshake",
+        fake_builder,
+    )
+    client = FairlandCloudClient(thing_id="thing", auth_manager=_FakeAuthManager())
+    monkeypatch.setattr(
+        client,
+        "_fetch_iot_authorizer",
+        lambda _token: IotAuthorizer("authorizer", "signature"),
+    )
+
+    with pytest.raises(FairlandCloudProtocolError):
+        client._ensure_connection()
+
+    assert connection_holder["connection"].disconnected is True
+    assert client._connection is None
+    assert client._connecting_connection is None
+    assert client._connection_expiry == 0.0
+
+
+def test_late_interruption_from_old_connection_does_not_poison_current():
+    old_connection = _FakeConnection()
+    current_connection = _FakeConnection()
+    client = FairlandCloudClient(thing_id="thing", auth_manager=_FakeAuthManager())
+    client._connection = current_connection
+    client._connection_expiry = 1_600.0
+
+    client._on_interrupted(old_connection, RuntimeError("old connection"))
+
+    assert old_connection.disconnected is True
+    assert client._connection is current_connection
+    assert client._connection_interrupted is False
+    assert client._connection_expiry == 1_600.0
+
+
+@pytest.mark.parametrize("status_code", [401, 403])
+def test_metrics_auth_rejection_is_not_hidden_by_optional_metrics(
+    monkeypatch, status_code
+):
+    class Response:
+        def __init__(self):
+            self.status_code = status_code
+
+    monkeypatch.setattr(
+        client_module.requests, "get", lambda *_args, **_kwargs: Response()
+    )
+    auth_manager = _FakeAuthManager()
+    client = FairlandCloudClient(thing_id="thing", auth_manager=auth_manager)
+    monkeypatch.setattr(
+        client,
+        "_request_shadow",
+        lambda: {"state": {"reported": BASELINE}},
+    )
+
+    with pytest.raises(FairlandCloudAuthError):
+        client.get_status()
+
+    assert auth_manager.authorization_rejected == 1
+
+
+def test_metrics_server_error_keeps_read_only_state_available(monkeypatch):
+    class Response:
+        status_code = 503
+
+    monkeypatch.setattr(
+        client_module.requests, "get", lambda *_args, **_kwargs: Response()
+    )
+    auth_manager = _FakeAuthManager()
+    client = FairlandCloudClient(thing_id="thing", auth_manager=auth_manager)
+    monkeypatch.setattr(
+        client,
+        "_request_shadow",
+        lambda: {"state": {"reported": BASELINE}},
+    )
+    monkeypatch.setattr(
+        client,
+        "_request_schedule",
+        lambda: SCHEDULE_DOCUMENT,
+    )
+
+    state = client.get_status()
+
+    assert state["metricsSummary"] == {}
+    assert auth_manager.authorization_rejected == 0
 
 
 def test_extract_only_changed_allowlisted_field():

@@ -35,7 +35,6 @@ The schedule is deliberately read-only.
 - A supported heat pump already linked to the Tholz cloud service
 - Cloud session values for the same account and device:
   - cloud user identifier
-  - app client secret
   - refresh token
   - device identifier
 - Internet access from Home Assistant to the vendor's cloud and AWS services
@@ -104,7 +103,7 @@ The example is optional, uses no custom cards, and can be adapted to the entity 
 
 ## Privacy and security
 
-Home Assistant stores the cloud user identifier, app client secret, refresh token, recovery seed token, device identifier, account e-mail, and integration options in its config-entry storage. In **automatic** recovery mode it also stores the account **password**; in **interactive** mode it does not.
+Home Assistant stores the cloud user identifier, refresh token, recovery seed token, device identifier, account e-mail, and integration options in its config-entry storage. In **automatic** recovery mode it also stores the account **password**; in **interactive** mode it does not.
 
 The password selector masks the value in the interface but does not encrypt it: in automatic mode the password is present in `.storage` and in any backup that includes this entry. Enable automatic mode only if you accept that exposure. Switch back to interactive mode at any time under **Reconfigure**, which removes the stored password; a rollback to an earlier build leaves the stored password in place until you reconfigure or restore a clean backup.
 
@@ -112,7 +111,7 @@ This integration never writes credentials, tokens, SRP values, `SECRET_HASH`, au
 
 One caveat outside the integration's control: the AWS SDK (`botocore`) logs full request and response contents — including tokens, new passwords, `SECRET_HASH`, and challenge sessions — at `DEBUG`. Do not set `DEBUG` logging for `botocore`, `boto3`, `urllib3`, or the root logger in production. Scope any debugging to `custom_components.tholz_fairland`, whose own log lines are sanitized.
 
-At runtime it sends credentials and device data only to the vendor-operated authentication, device, metrics, and messaging services required for the integration. Metrics and schedule data remain read-only. No analytics or telemetry are sent to this project's maintainers.
+At runtime it sends credentials and device data only to the vendor-operated authentication, device, metrics, custom-authorizer, and messaging services required for the integration. Metrics and schedule data remain read-only. No analytics or telemetry are sent to this project's maintainers.
 
 Protect Home Assistant backups because they can contain config-entry credentials, including the password in automatic mode. Remove the integration and change the account password if the Home Assistant installation or a backup is exposed.
 

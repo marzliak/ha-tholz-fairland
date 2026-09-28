@@ -209,6 +209,21 @@ def test_fresh_session_is_served_from_memory():
     assert reauths == []
 
 
+def test_downstream_authorization_rejection_invalidates_session_once():
+    auth = ScriptedAuthenticator(refresh={CURRENT_RT: _tokens("current")})
+    manager, _, reauths = _manager(auth)
+
+    assert manager.get_valid_id_token() == "id-current"
+
+    manager.report_authorization_rejected()
+    manager.report_authorization_rejected()
+
+    assert manager.id_token_expiry is None
+    assert reauths == [ReauthReason.CREDENTIAL_REJECTED]
+    with pytest.raises(CognitoCredentialRejected):
+        manager.get_valid_id_token()
+
+
 def test_session_inside_the_expiry_skew_is_refreshed_again():
     auth = ScriptedAuthenticator(refresh={CURRENT_RT: _tokens("current", ttl=60)})
     manager, _, _ = _manager(auth)

@@ -163,6 +163,19 @@ class FairlandAuthManager:
         return self._expiry
 
     @property
+    def user_sub(self) -> str:
+        """Current Cognito subject used to scope the MQTT client identity."""
+        return self._user_sub
+
+    def report_authorization_rejected(self) -> None:
+        """Invalidate the session and request one reauth after a downstream 401/403."""
+        with self._lock:
+            self._tokens = None
+            self._expiry = None
+            self._blocked = True
+            self._request_reauth(ReauthReason.CREDENTIAL_REJECTED)
+
+    @property
     def generation(self) -> int:
         """Monotonic counter bumped on each fresh SRP promotion."""
         return self._generation
