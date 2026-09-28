@@ -1,4 +1,4 @@
-"""Config-entry setup, teardown and rotated-credential bookkeeping."""
+"""Config-entry setup, teardown and recovered-credential bookkeeping."""
 
 import asyncio
 from types import SimpleNamespace
@@ -7,16 +7,21 @@ import pytest
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
 from custom_components.tholz_fairland import (
+    AUTH_MANAGER_KEY,
+    CLOSED_KEY,
     DOMAIN,
-    SKIP_RELOAD_KEY,
-    _adopt_rotated_token,
-    _async_reload_entry,
+    _SRP_LEDGERS,
+    _apply_credential_update,
+    _build_auth_manager,
     _build_client,
     _entry_settings,
+    _normalize,
+    _normalize_in_place,
     _resolve_credentials,
     async_setup_entry,
     async_unload_entry,
 )
+from custom_components.tholz_fairland.cloud.auth_manager import CredentialUpdate
 from custom_components.tholz_fairland.cloud.client import FairlandCloudAuthError
 
 CLOUD_DATA = {
@@ -25,6 +30,7 @@ CLOUD_DATA = {
     "cognito_client_secret": "client-secret",
     "cognito_refresh_token": "live-token",
     "credential_seed_refresh_token": "seed-token",
+    "cognito_recovery_mode": "interactive",
 }
 
 
@@ -39,8 +45,15 @@ class FakeConfigEntries:
     def __init__(self, forward_error=None):
         self.forward_error = forward_error
         self.unload_result = True
-        self.reloaded = []
         self.updates = []
+        self.reloaded = []
+        self.entries = {}
+
+    def register(self, entry):
+        self.entries[entry.entry_id] = entry
+
+    def async_get_entry(self, entry_id):
+        return self.entries.get(entry_id)
 
     async def async_forward_entry_setups(self, _entry, _platforms):
         if self.forward_error is not None:
@@ -49,7 +62,7 @@ class FakeConfigEntries:
     async def async_unload_platforms(self, _entry, _platforms):
         return self.unload_result
 
-    async def async_schedule_reload(self, entry_id):
+    def async_schedule_reload(self, entry_id):
         self.reloaded.append(entry_id)
 
     def async_update_entry(self, entry, **kwargs):
@@ -82,22 +95,15 @@ class FakeEntry:
         self.data = dict(data or {})
         self.options = dict(options or {})
         self.unload_callbacks = []
-        self.update_listeners = []
 
     def async_on_unload(self, callback):
         self.unload_callbacks.append(callback)
-
-    def add_update_listener(self, listener):
-        self.update_listeners.append(listener)
-        return lambda: None
 
 
 class FakeClient:
     def __init__(self, status_error=None):
         self.status_error = status_error
         self.closed = 0
-        self.refresh_callback = None
-        self.auth_callback = None
         self.state_callback = None
 
     def get_status(self):
@@ -111,18 +117,33 @@ class FakeClient:
     def set_state_change_callback(self, callback):
         self.state_callback = callback
 
-    def set_refresh_token_callback(self, callback):
-        self.refresh_callback = callback
 
-    def set_auth_failure_callback(self, callback):
-        self.auth_callback = callback
+class FakeAuthManager:
+    """Captures the persistence/reauth callbacks the setup wires."""
+
+    def __init__(self):
+        self.persist_callback = None
+        self.reauth_callback = None
+
+    def set_persist_callback(self, callback):
+        self.persist_callback = callback
+
+    def set_reauth_callback(self, callback):
+        self.reauth_callback = callback
 
 
-def _install_client(monkeypatch, client, polling=30):
+def _install_client(monkeypatch, client, auth_manager=None, polling=30):
+    auth_manager = auth_manager or FakeAuthManager()
     monkeypatch.setattr(
         "custom_components.tholz_fairland._build_client",
-        lambda _entry: (client, polling),
+        lambda _entry: (client, auth_manager, polling),
     )
+    return auth_manager
+
+
+def _register(hass, entry, manager):
+    hass.data[DOMAIN] = {entry.entry_id: {AUTH_MANAGER_KEY: manager}}
+    hass.config_entries.register(entry)
 
 
 # --- settings precedence -------------------------------------------------
@@ -137,25 +158,25 @@ def test_options_take_precedence_over_stored_data():
 
 
 def test_edited_polling_interval_reaches_the_manager():
-    """The options flow would be a no-op if data won the merge."""
     entry = SimpleNamespace(
-        data=CLOUD_DATA,
-        options={"polling_interval": 120},
+        entry_id="e", data=CLOUD_DATA, options={"polling_interval": 120}
     )
-    _, polling = _build_client(entry)
+    _, _auth, polling = _build_client(entry)
     assert polling == 120
 
 
 def test_cloud_defaults_apply_when_no_interval_is_stored():
-    entry = SimpleNamespace(data=CLOUD_DATA, options={})
-    _, polling = _build_client(entry)
+    entry = SimpleNamespace(entry_id="e", data=CLOUD_DATA, options={})
+    _, _auth, polling = _build_client(entry)
     assert polling == 30
 
 
 def test_transport_identity_ignores_options():
     """thing_id is never exposed by the options schema and must not be forgeable."""
-    entry = SimpleNamespace(data=CLOUD_DATA, options={"thing_id": "attacker-thing"})
-    client, _ = _build_client(entry)
+    entry = SimpleNamespace(
+        entry_id="e", data=CLOUD_DATA, options={"thing_id": "attacker-thing"}
+    )
+    client, _auth, _ = _build_client(entry)
     assert client.thing_id == "thing-uuid"
 
 
@@ -164,7 +185,7 @@ def test_seed_falls_back_to_the_live_token():
     assert (live, seed) == ("only-token", "only-token")
 
 
-def test_seed_is_kept_distinct_when_stored():
+def test_seed_uses_the_stored_recovery_seed():
     live, seed = _resolve_credentials(
         {
             "cognito_refresh_token": "rotated",
@@ -184,22 +205,25 @@ def test_missing_credentials_resolve_to_empty():
 @pytest.mark.asyncio
 async def test_successful_setup_registers_runtime_and_callbacks(monkeypatch):
     hass, entry, client = FakeHass(), FakeEntry(CLOUD_DATA), FakeClient()
-    _install_client(monkeypatch, client)
+    hass.config_entries.register(entry)
+    auth = _install_client(monkeypatch, client)
 
     assert await async_setup_entry(hass, entry)
 
     assert hass.data[DOMAIN][entry.entry_id]["client"] is client
-    assert client.refresh_callback is not None
-    assert client.auth_callback is not None
+    assert hass.data[DOMAIN][entry.entry_id][AUTH_MANAGER_KEY] is auth
+    assert auth.persist_callback is not None
+    assert auth.reauth_callback is not None
     assert hass.background == ["Tholz Fairland polling updater"]
 
     await async_unload_entry(hass, entry)
 
 
 @pytest.mark.asyncio
-async def test_unload_stops_polling_and_clears_domain_data(monkeypatch):
+async def test_unload_detaches_callbacks_before_stopping(monkeypatch):
     hass, entry, client = FakeHass(), FakeEntry(CLOUD_DATA), FakeClient()
-    _install_client(monkeypatch, client)
+    hass.config_entries.register(entry)
+    auth = _install_client(monkeypatch, client)
     await async_setup_entry(hass, entry)
 
     assert await async_unload_entry(hass, entry)
@@ -207,11 +231,16 @@ async def test_unload_stops_polling_and_clears_domain_data(monkeypatch):
     assert DOMAIN not in hass.data
     assert client.closed == 1
     assert client.state_callback is None
+    # Detached inside async_unload_entry so a late worker thread cannot reach a
+    # torn-down entry through this manager.
+    assert auth.persist_callback is None
+    assert auth.reauth_callback is None
 
 
 @pytest.mark.asyncio
 async def test_unload_is_refused_when_platforms_refuse(monkeypatch):
     hass, entry, client = FakeHass(), FakeEntry(CLOUD_DATA), FakeClient()
+    hass.config_entries.register(entry)
     _install_client(monkeypatch, client)
     await async_setup_entry(hass, entry)
     hass.config_entries.unload_result = False
@@ -227,6 +256,7 @@ async def test_unload_is_refused_when_platforms_refuse(monkeypatch):
 async def test_auth_error_during_setup_asks_for_reauth(monkeypatch):
     client = FakeClient(status_error=FairlandCloudAuthError("rejected"))
     hass, entry = FakeHass(), FakeEntry(CLOUD_DATA)
+    hass.config_entries.register(entry)
     _install_client(monkeypatch, client)
 
     with pytest.raises(ConfigEntryAuthFailed):
@@ -240,6 +270,7 @@ async def test_auth_error_during_setup_asks_for_reauth(monkeypatch):
 async def test_unreachable_device_during_setup_retries_later(monkeypatch):
     client = FakeClient(status_error=OSError("no route to host"))
     hass, entry = FakeHass(), FakeEntry(CLOUD_DATA)
+    hass.config_entries.register(entry)
     _install_client(monkeypatch, client)
 
     with pytest.raises(ConfigEntryNotReady):
@@ -251,9 +282,9 @@ async def test_unreachable_device_during_setup_retries_later(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_platform_failure_releases_the_client(monkeypatch):
-    """A half-registered runtime would leak an MQTT connection on retry."""
     hass = FakeHass(forward_error=RuntimeError("platform boom"))
     entry, client = FakeEntry(CLOUD_DATA), FakeClient()
+    hass.config_entries.register(entry)
     _install_client(monkeypatch, client)
 
     with pytest.raises(RuntimeError):
@@ -264,94 +295,196 @@ async def test_platform_failure_releases_the_client(monkeypatch):
     assert hass.background == []
 
 
-@pytest.mark.asyncio
-async def test_second_entry_survives_teardown_of_the_first(monkeypatch):
+# --- migration/normalization ---------------------------------------------
+
+
+def test_normalize_deshadows_credentials_out_of_options():
+    data = {"cognito_user_sub": "canonical", "cognito_refresh_token": "tok"}
+    options = {"cognito_user_sub": "stale", "polling_interval": 45}
+    new_data, new_options = _normalize(data, options)
+    assert new_data["cognito_user_sub"] == "stale"  # merged value wins, moved to data
+    assert "cognito_user_sub" not in new_options
+    assert new_options == {"polling_interval": 45}
+
+
+def test_normalize_fills_seed_and_defaults_mode():
+    new_data, _ = _normalize({"cognito_refresh_token": "tok"}, {})
+    assert new_data["credential_seed_refresh_token"] == "tok"
+    assert new_data["cognito_recovery_mode"] == "interactive"
+
+
+def test_normalize_drops_password_without_automatic_mode():
+    new_data, _ = _normalize(
+        {"cognito_refresh_token": "t", "cognito_password": "pw"}, {}
+    )
+    assert "cognito_password" not in new_data
+    assert new_data["cognito_recovery_mode"] == "interactive"
+
+
+def test_normalize_is_idempotent():
+    once = _normalize(dict(CLOUD_DATA), {"cognito_refresh_token": "shadow"})
+    twice = _normalize(*once)
+    assert twice == once
+
+
+def test_normalize_never_carries_thing_id_from_options():
+    _data, options = _normalize(CLOUD_DATA, {"thing_id": "attacker"})
+    assert "thing_id" not in options
+
+
+def test_setup_normalization_repairs_a_shadowing_options_write():
+    """A rolled-back build may put credentials back into options; setup repairs it."""
     hass = FakeHass()
-    first, second = FakeEntry(CLOUD_DATA), FakeEntry(CLOUD_DATA)
-    second.entry_id = "entry-2"
-    _install_client(monkeypatch, FakeClient())
-    await async_setup_entry(hass, first)
-    _install_client(monkeypatch, FakeClient())
-    await async_setup_entry(hass, second)
+    entry = FakeEntry(CLOUD_DATA, options={"cognito_user_sub": "stale-shadow"})
+    hass.config_entries.register(entry)
 
-    await async_unload_entry(hass, first)
+    _normalize_in_place(hass, entry)
 
-    assert second.entry_id in hass.data[DOMAIN]
-
-    await async_unload_entry(hass, second)
+    assert "cognito_user_sub" not in entry.options
+    assert entry.data["cognito_user_sub"] == "stale-shadow"
+    assert hass.config_entries.updates  # a write happened
 
 
-# --- rotated credential bookkeeping --------------------------------------
-
-
-def test_rotated_token_is_persisted_without_reloading():
-    hass, entry = FakeHass(), FakeEntry(CLOUD_DATA)
-    hass.data[DOMAIN] = {entry.entry_id: {}}
-
-    _adopt_rotated_token(hass, entry, "rotated-token")
-
-    assert entry.data["cognito_refresh_token"] == "rotated-token"
-    assert hass.data[DOMAIN][entry.entry_id][SKIP_RELOAD_KEY] is True
-
-
-def test_rotated_token_clears_a_shadowing_options_copy():
-    """An options token would otherwise win the merge and undo the rotation."""
+def test_setup_normalization_is_a_noop_when_already_canonical():
     hass = FakeHass()
-    entry = FakeEntry(CLOUD_DATA, options={"cognito_refresh_token": "stale"})
-    hass.data[DOMAIN] = {entry.entry_id: {}}
+    entry = FakeEntry(CLOUD_DATA, options={"polling_interval": 45})
+    hass.config_entries.register(entry)
 
-    _adopt_rotated_token(hass, entry, "rotated-token")
-
-    assert "cognito_refresh_token" not in entry.options
-    assert _entry_settings(entry)["cognito_refresh_token"] == "rotated-token"
-
-
-def test_adopting_an_unchanged_token_writes_nothing():
-    hass, entry = FakeHass(), FakeEntry(CLOUD_DATA)
-    hass.data[DOMAIN] = {entry.entry_id: {}}
-
-    _adopt_rotated_token(hass, entry, "live-token")
+    _normalize_in_place(hass, entry)
 
     assert hass.config_entries.updates == []
 
 
-def test_seed_is_never_replaced_by_a_rotated_token():
-    hass, entry = FakeHass(), FakeEntry(CLOUD_DATA)
-    hass.data[DOMAIN] = {entry.entry_id: {}}
+def test_srp_budget_ledger_is_shared_across_manager_instances():
+    """Rebuilding the manager for one entry must not reset its SRP budget."""
+    _SRP_LEDGERS.pop("entry-ledger-test", None)
+    entry = SimpleNamespace(
+        entry_id="entry-ledger-test", data=dict(CLOUD_DATA), options={}
+    )
+    first = _build_auth_manager(entry)
+    second = _build_auth_manager(entry)
+    assert first._srp_ledger is second._srp_ledger
+    _SRP_LEDGERS.pop("entry-ledger-test", None)
 
-    _adopt_rotated_token(hass, entry, "rotated-token")
+
+# --- recovered credential bookkeeping ------------------------------------
+
+
+def test_rotated_token_is_persisted():
+    hass, entry = FakeHass(), FakeEntry(CLOUD_DATA)
+    manager = object()
+    _register(hass, entry, manager)
+
+    _apply_credential_update(
+        hass,
+        entry,
+        manager,
+        CredentialUpdate(current_token="rotated", expected_current="live-token"),
+    )
+
+    assert entry.data["cognito_refresh_token"] == "rotated"
+
+
+def test_ordinary_rotation_never_touches_the_recovery_seed():
+    hass, entry = FakeHass(), FakeEntry(CLOUD_DATA)
+    manager = object()
+    _register(hass, entry, manager)
+
+    _apply_credential_update(
+        hass, entry, manager, CredentialUpdate(current_token="rotated")
+    )
 
     assert entry.data["credential_seed_refresh_token"] == "seed-token"
 
 
-@pytest.mark.asyncio
-async def test_reload_listener_ignores_our_own_token_write():
+def test_fresh_srp_promotes_current_seed_and_sub():
     hass, entry = FakeHass(), FakeEntry(CLOUD_DATA)
-    hass.data[DOMAIN] = {entry.entry_id: {}}
-    _adopt_rotated_token(hass, entry, "rotated-token")
+    manager = object()
+    _register(hass, entry, manager)
 
-    await _async_reload_entry(hass, entry)
+    _apply_credential_update(
+        hass,
+        entry,
+        manager,
+        CredentialUpdate(
+            current_token="fresh",
+            recovery_token="fresh",
+            user_sub="new-sub",
+            promote_recovery=True,
+            expected_current="live-token",
+        ),
+    )
 
-    assert hass.config_entries.reloaded == []
+    assert entry.data["cognito_refresh_token"] == "fresh"
+    # Single seed key, kept in step so a rollback build still authenticates.
+    assert entry.data["credential_seed_refresh_token"] == "fresh"
+    assert entry.data["cognito_user_sub"] == "new-sub"
 
 
-@pytest.mark.asyncio
-async def test_reload_listener_still_reloads_on_a_user_options_change():
+def test_adopting_an_unchanged_token_writes_nothing():
     hass, entry = FakeHass(), FakeEntry(CLOUD_DATA)
-    hass.data[DOMAIN] = {entry.entry_id: {}}
+    manager = object()
+    _register(hass, entry, manager)
 
-    await _async_reload_entry(hass, entry)
+    _apply_credential_update(
+        hass, entry, manager, CredentialUpdate(current_token="live-token")
+    )
 
-    assert hass.config_entries.reloaded == [entry.entry_id]
+    assert hass.config_entries.updates == []
 
 
-@pytest.mark.asyncio
-async def test_reload_suppression_applies_only_once():
+def test_stale_write_is_dropped_when_the_stored_token_moved():
+    """CAS: another writer already advanced the token past this cycle's baseline."""
     hass, entry = FakeHass(), FakeEntry(CLOUD_DATA)
-    hass.data[DOMAIN] = {entry.entry_id: {}}
-    _adopt_rotated_token(hass, entry, "rotated-token")
+    manager = object()
+    _register(hass, entry, manager)
 
-    await _async_reload_entry(hass, entry)
-    await _async_reload_entry(hass, entry)
+    _apply_credential_update(
+        hass,
+        entry,
+        manager,
+        CredentialUpdate(current_token="stale", expected_current="a-different-token"),
+    )
 
-    assert hass.config_entries.reloaded == [entry.entry_id]
+    assert entry.data["cognito_refresh_token"] == "live-token"
+    assert hass.config_entries.updates == []
+
+
+def test_write_from_a_superseded_manager_is_dropped():
+    hass, entry = FakeHass(), FakeEntry(CLOUD_DATA)
+    active = object()
+    _register(hass, entry, active)
+    superseded = object()
+
+    _apply_credential_update(
+        hass, entry, superseded, CredentialUpdate(current_token="stale")
+    )
+
+    assert entry.data["cognito_refresh_token"] == "live-token"
+    assert hass.config_entries.updates == []
+
+
+def test_write_to_a_removed_entry_is_dropped():
+    hass, entry = FakeHass(), FakeEntry(CLOUD_DATA)
+    manager = object()
+    # Runtime present but the entry has been removed from the registry.
+    hass.data[DOMAIN] = {entry.entry_id: {AUTH_MANAGER_KEY: manager}}
+
+    _apply_credential_update(
+        hass, entry, manager, CredentialUpdate(current_token="rotated")
+    )
+
+    assert hass.config_entries.updates == []
+
+
+def test_write_after_close_is_dropped():
+    hass, entry = FakeHass(), FakeEntry(CLOUD_DATA)
+    manager = object()
+    hass.data[DOMAIN] = {entry.entry_id: {AUTH_MANAGER_KEY: manager, CLOSED_KEY: True}}
+    hass.config_entries.register(entry)
+
+    _apply_credential_update(
+        hass, entry, manager, CredentialUpdate(current_token="rotated")
+    )
+
+    assert hass.config_entries.updates == []

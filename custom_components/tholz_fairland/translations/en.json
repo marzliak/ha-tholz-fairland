@@ -3,48 +3,88 @@
     "step": {
       "user": {
         "title": "Connect a Tholz Fairland heat pump",
-        "description": "Connects through the vendor cloud. Setup validates credentials and reads state without sending a device command.",
+        "description": "Connects through the vendor cloud. Setup validates credentials and reads state without sending a device command. Automatic recovery stores the account password in Home Assistant and in any backup that includes this entry.",
         "data": {
           "name": "Name",
           "cognito_user_sub": "Cloud user identifier",
           "cognito_client_secret": "App client secret",
           "cognito_refresh_token": "Refresh token",
           "thing_id": "Device identifier",
+          "cognito_username": "Account e-mail or username",
+          "cognito_recovery_mode": "Recovery mode",
+          "cognito_password": "Account password (automatic mode only)",
           "polling_interval": "Polling interval (seconds)"
         }
       },
       "reauth_confirm": {
         "title": "Reauthenticate Tholz Fairland",
-        "description": "The stored cloud session is no longer valid. Enter a fresh refresh token.",
+        "description": "The stored cloud session is no longer valid. Sign in with the account e-mail and password to recover it.",
         "data": {
-          "cognito_refresh_token": "Refresh token"
+          "cognito_username": "Account e-mail or username",
+          "cognito_password": "Account password",
+          "cognito_recovery_mode": "Recovery mode"
+        }
+      },
+      "challenge": {
+        "title": "Complete the sign-in challenge",
+        "description": "The account requires an additional verification step. Enter the requested value to finish signing in.",
+        "data": {
+          "challenge_response": "Verification code or new password"
+        }
+      },
+      "reconfigure": {
+        "title": "Change Fairland recovery mode",
+        "description": "Switch between automatic recovery (stores the account password) and interactive recovery. Leave the password blank to keep the stored one.",
+        "data": {
+          "cognito_recovery_mode": "Recovery mode",
+          "cognito_password": "Account password (automatic mode only)"
         }
       }
     },
     "error": {
       "cannot_connect": "Could not authenticate or read the device. No device command was sent.",
-      "invalid_token": "The cloud session was rejected. Enter a fresh refresh token."
+      "invalid_token": "The cloud session was rejected. Enter fresh credentials.",
+      "invalid_auth": "The account e-mail or password was rejected.",
+      "unsupported_challenge": "This account needs a sign-in step that cannot be completed here. Finish signing in with the vendor app, then try again.",
+      "challenge_failed": "The verification value was not accepted. Try again.",
+      "configuration_error": "The cloud configuration is incomplete or inconsistent.",
+      "missing_password": "Automatic recovery needs the account password.",
+      "wrong_account": "The account signed in does not match this device. Nothing was changed."
     },
     "abort": {
-      "already_configured": "This Fairland device is already configured."
+      "already_configured": "This Fairland device is already configured.",
+      "reauth_successful": "Reauthentication was successful.",
+      "reconfigure_successful": "Recovery mode updated.",
+      "reauth_unsuccessful": "Reauthentication was not completed."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Tholz Fairland options",
-        "description": "Changes are validated with a read-only request before the integration reloads. The device identifier cannot be changed here.",
+        "description": "The polling frequency takes effect after the integration reloads. Credentials are changed through reauthentication or Reconfigure, not here.",
         "data": {
-          "cognito_user_sub": "Cloud user identifier",
-          "cognito_client_secret": "App client secret",
-          "cognito_refresh_token": "Refresh token",
           "polling_interval": "Polling interval (seconds)"
         }
       }
     },
     "error": {
       "cannot_connect": "Could not authenticate or read the device. No device command was sent.",
-      "invalid_token": "The cloud session was rejected. Enter a fresh refresh token."
+      "invalid_token": "The cloud session was rejected. Enter fresh credentials.",
+      "invalid_auth": "The account e-mail or password was rejected.",
+      "unsupported_challenge": "This account needs a sign-in step that cannot be completed here. Finish signing in with the vendor app, then try again.",
+      "challenge_failed": "The verification value was not accepted. Try again.",
+      "configuration_error": "The cloud configuration is incomplete or inconsistent.",
+      "missing_password": "Automatic recovery needs the account password.",
+      "wrong_account": "The account signed in does not match this device. Nothing was changed."
+    }
+  },
+  "selector": {
+    "recovery_mode": {
+      "options": {
+        "automatic": "Automatic (store password, recover unattended)",
+        "interactive": "Interactive (ask for the password when needed)"
+      }
     }
   }
 }

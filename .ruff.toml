@@ -54,5 +54,6 @@ max-complexity = 25
     "S101", # Pytest uses assertions.
     "S105", # Fixture tokens are fake by design.
     "S106", # Fixture credentials are fake by design.
+    "S107", # Fixture token defaults are fake by design.
     "SLF001", # Validate small pure helpers without an MQTT connection.
 ]

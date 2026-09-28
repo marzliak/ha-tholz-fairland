@@ -52,12 +52,24 @@ This integration supports only the cloud-connected Fairland/TurboSilence product
 
 1. Open **Settings → Devices & services → Add integration**.
 2. Search for **Tholz Fairland**.
-3. Enter a display name and the four cloud session values for your account and device.
-4. Choose a polling interval from 10–300 seconds. The default is 30 seconds.
+3. Enter a display name and the cloud session values for your account and device.
+4. Optionally provide the account e-mail and choose a **recovery mode**:
+   - **Interactive** (default): stores no password. When the cloud rejects the
+     stored session, Home Assistant asks you to sign in again.
+   - **Automatic**: also stores the account password so the integration can sign
+     in again on its own. This trades some secret exposure (see Privacy and
+     security) for unattended recovery.
+5. Choose a polling interval from 10–300 seconds. The default is 30 seconds.
 
 Setup performs authentication and read-only state requests. It does not send a heat-pump command.
 
-The device identifier is fixed after setup. Credentials and polling frequency can be updated under the integration's **Configure** action. If the cloud rejects the stored session, Home Assistant opens a reauthentication flow that asks only for a fresh refresh token.
+The device identifier is fixed after setup. The polling frequency can be changed
+under the integration's **Configure** action, and the recovery mode under
+**Reconfigure**. If the cloud rejects every stored token, Home Assistant opens a
+reauthentication flow that asks for the account e-mail and password (completing
+any multi-factor or new-password challenge the account requires); in automatic
+mode the same sign-in then runs unattended. Recovery reuses the existing entry,
+so devices, entities, dashboards, automations, and history are preserved.
 
 ## Entities
 
@@ -92,11 +104,17 @@ The example is optional, uses no custom cards, and can be adapted to the entity 
 
 ## Privacy and security
 
-Home Assistant stores the cloud user identifier, app client secret, refresh token, device identifier, and integration options in its config-entry storage. The integration does not ask for or store the account password.
+Home Assistant stores the cloud user identifier, app client secret, refresh token, recovery seed token, device identifier, account e-mail, and integration options in its config-entry storage. In **automatic** recovery mode it also stores the account **password**; in **interactive** mode it does not.
+
+The password selector masks the value in the interface but does not encrypt it: in automatic mode the password is present in `.storage` and in any backup that includes this entry. Enable automatic mode only if you accept that exposure. Switch back to interactive mode at any time under **Reconfigure**, which removes the stored password; a rollback to an earlier build leaves the stored password in place until you reconfigure or restore a clean backup.
+
+This integration never writes credentials, tokens, SRP values, `SECRET_HASH`, authorization headers, or Cognito challenge sessions to logs, diagnostics, or error messages, and it does not enable debug logging for any third-party library. Challenge sessions exist only in flow memory and are discarded when the flow ends.
+
+One caveat outside the integration's control: the AWS SDK (`botocore`) logs full request and response contents — including tokens, new passwords, `SECRET_HASH`, and challenge sessions — at `DEBUG`. Do not set `DEBUG` logging for `botocore`, `boto3`, `urllib3`, or the root logger in production. Scope any debugging to `custom_components.tholz_fairland`, whose own log lines are sanitized.
 
 At runtime it sends credentials and device data only to the vendor-operated authentication, device, metrics, and messaging services required for the integration. Metrics and schedule data remain read-only. No analytics or telemetry are sent to this project's maintainers.
 
-Protect Home Assistant backups because they can contain config-entry credentials. Remove the integration and revoke the cloud session if the Home Assistant installation or a backup is exposed.
+Protect Home Assistant backups because they can contain config-entry credentials, including the password in automatic mode. Remove the integration and change the account password if the Home Assistant installation or a backup is exposed.
 
 ## Limitations
 

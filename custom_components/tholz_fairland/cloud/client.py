@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import base64
 import gzip
-import hashlib
-import hmac
 import json
 import logging
 import threading
@@ -19,7 +16,17 @@ import boto3
 import requests
 from awscrt import auth, mqtt
 from awsiot import mqtt_connection_builder
-from botocore.exceptions import ClientError
+
+from .auth_manager import FairlandAuthManager, RecoveryMode
+from .cognito_auth import (
+    CognitoAuthenticator,
+    CognitoAuthError,
+    CognitoChallengeRequired,
+    CognitoConfigurationError,
+    CognitoCredentialRejected,
+    CognitoProtocolError,
+    CognitoTransientError,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -46,16 +53,6 @@ SCHEDULE_HOUR_MAX = 23
 SCHEDULE_MINUTE_MAX = 59
 
 MUTABLE_HEAT_FIELDS = frozenset({"opMode", "sp", "fanMode"})
-# Cognito error codes that mean the stored refresh token itself is no longer
-# valid (expired or rotated out) and a recovery seed should be tried once.
-_INVALID_REFRESH_CODES = frozenset(
-    {
-        "ExpiredTokenException",
-        "InvalidTokenException",
-        "NotAuthorizedException",
-        "ResourceNotFoundException",
-    }
-)
 VALID_OPERATION_MODES = frozenset({0, 2, 4, 5})
 VALID_FAN_MODES = frozenset({0, 1})
 MIN_SETPOINT = 120
@@ -63,7 +60,6 @@ MAX_SETPOINT = 400
 MILLISECONDS_EPOCH_THRESHOLD = 10_000_000_000
 HTTP_OK = 200
 
-ERR_INVALID_ID_TOKEN = "Cognito returned an invalid ID token"  # noqa: S105
 ERR_WRITE_PATH = "cloud writes must target heatings.heat0"
 ERR_INTEGER_FIELD = "writable Fairland fields must be integers"
 ERR_OPERATION_MODE = "unsupported Fairland operation mode"
@@ -98,22 +94,6 @@ class FairlandCloudAuthError(FairlandCloudError):
 
 class FairlandCloudProtocolError(FairlandCloudError):
     """The cloud response did not match the verified protocol."""
-
-
-def _jwt_payload(token: str) -> dict[str, Any]:
-    """Decode JWT claims without treating them as trusted authorization data."""
-    try:
-        encoded = token.split(".")[1]
-        encoded += "=" * (-len(encoded) % 4)
-        return json.loads(base64.urlsafe_b64decode(encoded))
-    except (IndexError, ValueError, json.JSONDecodeError) as exc:
-        raise FairlandCloudAuthError(ERR_INVALID_ID_TOKEN) from exc
-
-
-def _secret_hash(username: str, client_secret: str) -> str:
-    message = f"{username}{USER_POOL_CLIENT_ID}".encode()
-    digest = hmac.new(client_secret.encode(), message, hashlib.sha256).digest()
-    return base64.b64encode(digest).decode()
 
 
 def extract_mutable_changes(
@@ -241,23 +221,37 @@ class FairlandCloudClient:
     def __init__(
         self,
         thing_id: str,
-        user_sub: str,
-        client_secret: str,
-        refresh_token: str,
+        user_sub: str | None = None,
+        client_secret: str | None = None,
+        refresh_token: str | None = None,
         initial_refresh_token: str | None = None,
         timeout: float = 15.0,
         convergence_timeout: float = DEFAULT_CONVERGENCE_TIMEOUT,
+        *,
+        auth_manager: FairlandAuthManager | None = None,
     ) -> None:
         self.thing_id = thing_id
-        self._user_sub = user_sub
-        self._client_secret = client_secret
-        self._refresh_token = refresh_token
-        self._initial_refresh_token = initial_refresh_token or refresh_token
         self._timeout = timeout
         self._convergence_timeout = convergence_timeout
 
-        self._id_token: str | None = None
-        self._id_token_expiry = 0.0
+        # Token acquisition (refresh -> recovery seed -> SRP login) is owned by
+        # the auth manager. When one is not injected, build a refresh-only
+        # manager from the legacy credential arguments so existing callers and
+        # tests keep working unchanged.
+        if auth_manager is None:
+            authenticator = CognitoAuthenticator(
+                REGION, USER_POOL_ID, USER_POOL_CLIENT_ID
+            )
+            auth_manager = FairlandAuthManager(
+                authenticator,
+                user_sub=user_sub or "",
+                client_secret=client_secret or "",
+                current_token=refresh_token or "",
+                recovery_token=initial_refresh_token,
+                mode=RecoveryMode.INTERACTIVE,
+            )
+        self._auth = auth_manager
+
         self._credentials: dict[str, Any] | None = None
         self._credentials_expiry = 0.0
         self._connection = None
@@ -280,8 +274,6 @@ class FairlandCloudClient:
         self._metrics_summary: dict[str, float] | None = None
         self._metrics_updated_at = 0.0
         self._state_change_callback: Callable[[], None] | None = None
-        self._refresh_token_updated_callback: Callable[[str], None] | None = None
-        self._auth_failure_callback: Callable[[BaseException], None] | None = None
 
         shadow = f"$aws/things/{self.thing_id}/shadow"
         self._get_topic = f"{shadow}/get"
@@ -293,94 +285,35 @@ class FairlandCloudClient:
         self._schedule_get_accepted_topic = f"{schedule_shadow}/get/accepted"
         self._schedule_update_accepted_topic = f"{schedule_shadow}/update/accepted"
 
-    def _attempt_refresh(self, refresh_token: str) -> dict[str, str]:
-        """Run one Cognito refresh grant and return its result payload."""
-        response = boto3.client("cognito-idp", region_name=REGION).initiate_auth(
-            ClientId=USER_POOL_CLIENT_ID,
-            AuthFlow="REFRESH_TOKEN_AUTH",
-            AuthParameters={
-                "REFRESH_TOKEN": refresh_token,
-                "SECRET_HASH": _secret_hash(self._user_sub, self._client_secret),
-            },
-        )
-        result = response["AuthenticationResult"]
-        return {
-            "id_token": str(result["IdToken"]),
-            "refresh_token": str(result.get("RefreshToken") or ""),
-        }
+    def _id_token(self) -> str:
+        """
+        Return a valid Cognito id token, translating auth errors for setup.
 
-    def _notify_auth_failure(self, exc: BaseException) -> None:
-        """Tell the integration that Cognito rejected every known token."""
-        if self._auth_failure_callback is not None:
-            with suppress(Exception):
-                self._auth_failure_callback(exc)
-
-    def _adopt_refresh_token(self, refresh_token: str) -> None:
-        """Keep a rotated token and hand it to the integration to persist."""
-        if not refresh_token or refresh_token == self._refresh_token:
-            return
-        self._refresh_token = refresh_token
-        if self._refresh_token_updated_callback is not None:
-            with suppress(Exception):
-                self._refresh_token_updated_callback(refresh_token)
-
-    def _refresh_id_token(self) -> str:
-        if self._id_token and self._id_token_expiry > time.time() + 120:
-            return self._id_token
-
-        seed = self._initial_refresh_token
-        recovered_from_seed = False
+        The auth manager owns the recovery chain and any reauth signalling; the
+        client only maps its typed failures onto the transport errors the
+        integration already distinguishes (auth failure vs. retry-later).
+        """
         try:
-            try:
-                result = self._attempt_refresh(self._refresh_token)
-            except ClientError as exc:
-                error_code = str(exc.response.get("Error", {}).get("Code", ""))
-                if (
-                    error_code in _INVALID_REFRESH_CODES
-                    and seed
-                    and seed != self._refresh_token
-                ):
-                    # The current refresh token was rejected; try the
-                    # pre-rotation token kept in the entry as a recovery
-                    # seed once, then prefer it for subsequent refreshes.
-                    result = self._attempt_refresh(seed)
-                    recovered_from_seed = True
-                else:
-                    raise
-        except FairlandCloudError as exc:
-            self._notify_auth_failure(exc)
-            raise
-        except Exception as exc:
-            auth_error = FairlandCloudAuthError(ERR_COGNITO_REFRESH)
-            self._notify_auth_failure(auth_error)
-            raise auth_error from exc
-
-        rotated = result["refresh_token"]
-        if recovered_from_seed and not rotated:
-            # Cognito accepted the seed but issued no replacement token, so
-            # adopt the seed itself instead of retrying the rejected one.
-            rotated = seed
-        self._adopt_refresh_token(rotated)
-        self._id_token = result["id_token"]
-        self._id_token_expiry = float(_jwt_payload(result["id_token"])["exp"])
-        return result["id_token"]
-
-    def set_refresh_token_callback(
-        self, callback: Callable[[str], None] | None
-    ) -> None:
-        """Notify the integration when Cognito rotates the stored refresh token."""
-        self._refresh_token_updated_callback = callback
-
-    def set_auth_failure_callback(
-        self, callback: Callable[[BaseException], None] | None
-    ) -> None:
-        """Notify the integration when Cognito rejects the token (or seed)."""
-        self._auth_failure_callback = callback
+            return self._auth.get_valid_id_token()
+        except (
+            CognitoCredentialRejected,
+            CognitoChallengeRequired,
+            CognitoConfigurationError,
+        ) as exc:
+            raise FairlandCloudAuthError(ERR_COGNITO_REFRESH) from exc
+        except CognitoTransientError as exc:
+            # Retry-later: surfaced as a non-auth error so setup maps it to
+            # ConfigEntryNotReady rather than a reauthentication prompt.
+            raise FairlandCloudError(ERR_COGNITO_REFRESH) from exc
+        except CognitoProtocolError as exc:
+            raise FairlandCloudProtocolError(ERR_COGNITO_REFRESH) from exc
+        except CognitoAuthError as exc:
+            raise FairlandCloudAuthError(ERR_COGNITO_REFRESH) from exc
 
     @property
     def id_token_expiry(self) -> float | None:
         """Expiry (UTC epoch) of the currently valid Cognito id token, if any."""
-        return self._id_token_expiry if self._id_token else None
+        return self._auth.id_token_expiry
 
     @staticmethod
     def _expiry_epoch(value: Any) -> float:
@@ -400,7 +333,11 @@ class FairlandCloudClient:
         if self._credentials and self._credentials_expiry > time.time() + 120:
             return self._credentials
 
-        id_token = self._refresh_id_token()
+        # A valid id token has already been obtained; any failure past this
+        # point is an AWS Identity/IoT service problem, not a rejected
+        # credential. It must surface as a retry-later (non-auth) error so setup
+        # maps it to ConfigEntryNotReady instead of prompting reauthentication.
+        id_token = self._id_token()
         logins = {LOGINS_KEY: id_token}
         identity = boto3.client("cognito-identity", region_name=REGION)
         try:
@@ -417,17 +354,17 @@ class FairlandCloudClient:
                 json={"target": identity_id},
                 timeout=self._timeout,
             )
-        except Exception as exc:
-            raise FairlandCloudAuthError(ERR_AWS_CREDENTIALS) from exc
+        except Exception:
+            raise FairlandCloudProtocolError(ERR_AWS_CREDENTIALS) from None
         if response.status_code != HTTP_OK:
-            raise FairlandCloudAuthError(ERR_POLICY_ATTACH)
+            raise FairlandCloudProtocolError(ERR_POLICY_ATTACH)
         try:
             credentials = identity.get_credentials_for_identity(
                 IdentityId=identity_id,
                 Logins=logins,
             )["Credentials"]
-        except Exception as exc:
-            raise FairlandCloudAuthError(ERR_AWS_CREDENTIALS) from exc
+        except Exception:
+            raise FairlandCloudProtocolError(ERR_AWS_CREDENTIALS) from None
 
         self._credentials = credentials
         self._credentials_expiry = self._expiry_epoch(credentials.get("Expiration"))
@@ -620,7 +557,7 @@ class FairlandCloudClient:
             response = requests.get(
                 METRICS_URL,
                 headers={
-                    "Authorization": self._refresh_id_token(),
+                    "Authorization": self._id_token(),
                     "User-Agent": "TholzHomeAssistant/0.3",
                 },
                 params={
