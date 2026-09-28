@@ -22,6 +22,7 @@ jobs:
         uses: home-assistant/actions/hassfest@a7c616ce81ccda50150bf1595786c71b1883fabb # master
 
   hacs:
+    if: github.event.repository.private == false
     runs-on: ubuntu-latest
     steps:
       - name: Run HACS validation
