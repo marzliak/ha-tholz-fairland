@@ -169,12 +169,12 @@ def _counting_authenticator():
     return authenticator, calls
 
 
-def _srp_login(*respond, initiate=None):
+def _srp_login(*respond, initiate=None, client_secret=CLIENT_SECRET):
     """Run a full SRP login against the fake and return (client, outcome)."""
     client = FakeCognitoClient(
         initiate=[initiate or _password_verifier()], respond=list(respond)
     )
-    return client, _authenticator(client).login_srp(USERNAME, PASSWORD, CLIENT_SECRET)
+    return client, _authenticator(client).login_srp(USERNAME, PASSWORD, client_secret)
 
 
 def _state(name="SMS_MFA", *, session=SESSION, depth=0):
@@ -353,18 +353,23 @@ def test_an_empty_refresh_token_is_rejected_without_calling_cognito(missing):
     assert factory_calls == []
 
 
-@pytest.mark.parametrize(
-    ("subject", "client_secret"),
-    [("", CLIENT_SECRET), (None, CLIENT_SECRET), (USER_SUB, ""), (USER_SUB, None)],
-)
-def test_refresh_without_subject_or_secret_is_a_configuration_error(
-    subject, client_secret
-):
+@pytest.mark.parametrize("subject", ["", None])
+def test_refresh_without_subject_is_a_configuration_error(subject):
     authenticator, factory_calls = _counting_authenticator()
 
     with pytest.raises(CognitoConfigurationError):
-        authenticator.refresh("rt", subject, client_secret)
+        authenticator.refresh("rt", subject, None)
     assert factory_calls == []
+
+
+@pytest.mark.parametrize("client_secret", ["", None])
+def test_refresh_public_client_omits_secret_hash(client_secret):
+    client = FakeCognitoClient(initiate=[_auth_result(refresh=None)])
+
+    _authenticator(client).refresh("rt", USER_SUB, client_secret)
+
+    (request,) = client.initiate_calls
+    assert request["AuthParameters"] == {"REFRESH_TOKEN": "rt"}
 
 
 @pytest.mark.parametrize(
@@ -492,6 +497,19 @@ def test_srp_login_uses_the_login_name_then_the_internal_username():
     assert answers["PASSWORD_CLAIM_SECRET_BLOCK"]
 
 
+@pytest.mark.parametrize("client_secret", ["", None])
+def test_srp_login_public_client_omits_secret_hash(client_secret):
+    client, outcome = _srp_login(
+        _auth_result(refresh="synthetic-srp-rt"), client_secret=client_secret
+    )
+
+    assert isinstance(outcome, AuthSuccess)
+    (start,) = client.initiate_calls
+    assert "SECRET_HASH" not in start["AuthParameters"]
+    (verifier,) = client.respond_calls
+    assert "SECRET_HASH" not in verifier["ChallengeResponses"]
+
+
 @pytest.mark.parametrize(
     ("claims", "subject"),
     [
@@ -512,8 +530,6 @@ def test_srp_success_reports_the_refresh_subject(claims, subject):
     [
         ("", CLIENT_SECRET, PASSWORD, CognitoConfigurationError),
         (None, CLIENT_SECRET, PASSWORD, CognitoConfigurationError),
-        (USERNAME, "", PASSWORD, CognitoConfigurationError),
-        (USERNAME, None, PASSWORD, CognitoConfigurationError),
         (USERNAME, CLIENT_SECRET, "", CognitoCredentialRejected),
         (USERNAME, CLIENT_SECRET, None, CognitoCredentialRejected),
     ],

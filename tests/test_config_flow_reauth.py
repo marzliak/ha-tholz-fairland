@@ -244,7 +244,7 @@ async def test_reauth_clears_a_shadowing_options_token(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_reauth_reuses_the_stored_client_secret(monkeypatch):
+async def test_reauth_ignores_and_clears_the_obsolete_client_secret(monkeypatch):
     _patch_authenticator(monkeypatch)
     FakeAuthenticator.login_outcome = AuthSuccess(tokens=_tokens(), subject="fresh-sub")
     flow = RecordingFlow(_entry())
@@ -253,7 +253,8 @@ async def test_reauth_reuses_the_stored_client_secret(monkeypatch):
         {"cognito_username": "u", "cognito_password": "pw"}
     )
 
-    assert FakeAuthenticator.last_login[2] == "client-secret"
+    assert FakeAuthenticator.last_login[2] is None
+    assert flow.aborted["data"]["cognito_client_secret"] == ""
 
 
 @pytest.mark.asyncio

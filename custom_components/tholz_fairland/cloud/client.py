@@ -35,7 +35,7 @@ _LOGGER = logging.getLogger(__name__)
 
 REGION = "us-east-1"
 USER_POOL_ID = "us-east-1_JA4N5tQGy"
-USER_POOL_CLIENT_ID = "4dohjhktfme1k3lkde7tptnptb"
+USER_POOL_CLIENT_ID = "4crf9di2so4tfe0cjn7lndci3j"
 IDENTITY_POOL_ID = "us-east-1:cfacf737-46a3-4393-a88b-ad4a493830c3"
 LOGINS_KEY = f"cognito-idp.{REGION}.amazonaws.com/{USER_POOL_ID}"
 ATTACH_URL = (
@@ -245,7 +245,7 @@ class FairlandCloudClient:
             auth_manager = FairlandAuthManager(
                 authenticator,
                 user_sub=user_sub or "",
-                client_secret=client_secret or "",
+                client_secret=client_secret,
                 current_token=refresh_token or "",
                 recovery_token=initial_refresh_token,
                 mode=RecoveryMode.INTERACTIVE,

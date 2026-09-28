@@ -27,7 +27,7 @@ from custom_components.tholz_fairland.cloud.client import FairlandCloudAuthError
 CLOUD_DATA = {
     "thing_id": "thing-uuid",
     "cognito_user_sub": "user-sub",
-    "cognito_client_secret": "client-secret",
+    "cognito_client_secret": "",
     "cognito_refresh_token": "live-token",
     "credential_seed_refresh_token": "seed-token",
     "cognito_recovery_mode": "interactive",

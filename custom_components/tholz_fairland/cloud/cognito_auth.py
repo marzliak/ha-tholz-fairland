@@ -123,7 +123,7 @@ ERR_INVALID_ID_TOKEN = "Cognito returned an invalid ID token"  # noqa: S105
 ERR_NO_AUTH_RESULT = "Cognito returned no authentication result"
 ERR_NO_REFRESH_TOKEN = "Cognito login issued no refresh token"  # noqa: S105
 ERR_MISSING_USERNAME = "a Cognito username is required for SRP login"
-ERR_MISSING_SECRET = "a Cognito client secret is required"  # noqa: S105
+
 ERR_CREDENTIAL_REJECTED = "Cognito rejected the stored credentials"
 ERR_CHALLENGE_REJECTED = "the verification value was not accepted"
 ERR_TRANSIENT = "the Cognito service was temporarily unavailable"
@@ -378,7 +378,7 @@ class CognitoAuthenticator:
 
     # -- refresh grant -----------------------------------------------------
     def refresh(
-        self, refresh_token: str, subject: str, client_secret: str
+        self, refresh_token: str, subject: str, client_secret: str | None
     ) -> AuthTokens:
         """
         Run one REFRESH_TOKEN_AUTH grant.
@@ -389,16 +389,18 @@ class CognitoAuthenticator:
         """
         if not refresh_token:
             raise CognitoCredentialRejected(ERR_CREDENTIAL_REJECTED)
-        if not subject or not client_secret:
+        if not subject:
             raise CognitoConfigurationError(ERR_CONFIG)
+        auth_parameters = {"REFRESH_TOKEN": refresh_token}
+        if client_secret:
+            auth_parameters["SECRET_HASH"] = secret_hash(
+                subject, self._client_id, client_secret
+            )
         try:
             response = self._idp().initiate_auth(
                 ClientId=self._client_id,
                 AuthFlow="REFRESH_TOKEN_AUTH",
-                AuthParameters={
-                    "REFRESH_TOKEN": refresh_token,
-                    "SECRET_HASH": secret_hash(subject, self._client_id, client_secret),
-                },
+                AuthParameters=auth_parameters,
             )
         except ClientError as exc:
             raise self._translate_client_error(exc, context="refresh") from None
@@ -411,7 +413,7 @@ class CognitoAuthenticator:
 
     # -- SRP login ---------------------------------------------------------
     def login_srp(
-        self, username: str, password: str, client_secret: str
+        self, username: str, password: str, client_secret: str | None
     ) -> AuthOutcome:
         """
         Authenticate with USER_SRP_AUTH using the stored username/password.
@@ -422,8 +424,6 @@ class CognitoAuthenticator:
         """
         if not username:
             raise CognitoConfigurationError(ERR_MISSING_USERNAME)
-        if not client_secret:
-            raise CognitoConfigurationError(ERR_MISSING_SECRET)
         if not password:
             raise CognitoCredentialRejected(ERR_CREDENTIAL_REJECTED)
         client = self._idp()
@@ -433,7 +433,7 @@ class CognitoAuthenticator:
             pool_id=self._user_pool_id,
             client_id=self._client_id,
             client=client,
-            client_secret=client_secret,
+            client_secret=client_secret or None,
         )
         try:
             auth_params = srp.get_auth_params()
@@ -464,7 +464,7 @@ class CognitoAuthenticator:
 
     # -- challenge responses ----------------------------------------------
     def respond_to_challenge(
-        self, state: ChallengeState, response: str, client_secret: str
+        self, state: ChallengeState, response: str, client_secret: str | None
     ) -> AuthOutcome:
         """
         Answer a supported challenge with a single user-supplied value.

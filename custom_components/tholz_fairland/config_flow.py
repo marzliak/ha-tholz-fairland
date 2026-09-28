@@ -86,8 +86,9 @@ def _cloud_schema(defaults: dict | None = None) -> vol.Schema:
                 CONF_COGNITO_USER_SUB_KEY,
                 default=defaults.get(CONF_COGNITO_USER_SUB_KEY, ""),
             ): str,
-            # Secrets carry no default so nothing is echoed back to the browser.
-            vol.Required(CONF_COGNITO_CLIENT_SECRET_KEY): _PASSWORD_SELECTOR,
+            # The current public Cognito app client has no client secret. Keep
+            # the legacy field optional only so old/manual entries can migrate.
+            vol.Optional(CONF_COGNITO_CLIENT_SECRET_KEY): _PASSWORD_SELECTOR,
             vol.Required(CONF_COGNITO_REFRESH_TOKEN_KEY): _PASSWORD_SELECTOR,
             vol.Required(
                 CONF_THING_ID_KEY, default=defaults.get(CONF_THING_ID_KEY, "")
@@ -167,7 +168,7 @@ async def _validate_cloud(hass, values: dict) -> None:
     client = FairlandCloudClient(
         thing_id=values[CONF_THING_ID_KEY],
         user_sub=values[CONF_COGNITO_USER_SUB_KEY],
-        client_secret=values[CONF_COGNITO_CLIENT_SECRET_KEY],
+        client_secret=values.get(CONF_COGNITO_CLIENT_SECRET_KEY),
         refresh_token=values[CONF_COGNITO_REFRESH_TOKEN_KEY],
     )
     try:
@@ -265,8 +266,9 @@ class TholzFairlandConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         entry = self._get_reauth_entry()
         errors: dict[str, str] = {}
         if user_input is not None:
-            merged = {**entry.data, **entry.options}
-            self._reauth_client_secret = merged[CONF_COGNITO_CLIENT_SECRET_KEY]
+            # Tholz 4.1.0 moved to a public Cognito app client. Never submit the
+            # obsolete secret retained by a pre-1.3 entry.
+            self._reauth_client_secret = None
             self._reauth_username = user_input[CONF_COGNITO_USERNAME_KEY]
             self._reauth_password = user_input[CONF_COGNITO_PASSWORD_KEY]
             self._reauth_mode = user_input.get(
@@ -424,6 +426,7 @@ class TholzFairlandConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         data[CONF_COGNITO_REFRESH_TOKEN_KEY] = token
         data[CONF_CREDENTIAL_SEED_REFRESH_TOKEN_KEY] = token
         data[CONF_COGNITO_USER_SUB_KEY] = outcome.subject
+        data[CONF_COGNITO_CLIENT_SECRET_KEY] = ""
         data[CONF_COGNITO_USERNAME_KEY] = self._reauth_username
         data[CONF_RECOVERY_MODE_KEY] = self._reauth_mode
         if self._reauth_mode == RECOVERY_MODE_AUTOMATIC:
@@ -447,7 +450,7 @@ def _build_entry_data(user_input: dict[str, Any]) -> dict[str, Any]:
         CONF_NAME_KEY: user_input[CONF_NAME_KEY],
         CONF_THING_ID_KEY: user_input[CONF_THING_ID_KEY],
         CONF_COGNITO_USER_SUB_KEY: user_input[CONF_COGNITO_USER_SUB_KEY],
-        CONF_COGNITO_CLIENT_SECRET_KEY: user_input[CONF_COGNITO_CLIENT_SECRET_KEY],
+        CONF_COGNITO_CLIENT_SECRET_KEY: "",
         CONF_COGNITO_REFRESH_TOKEN_KEY: token,
         CONF_CREDENTIAL_SEED_REFRESH_TOKEN_KEY: token,
         CONF_RECOVERY_MODE_KEY: mode,

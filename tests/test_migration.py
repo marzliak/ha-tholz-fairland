@@ -131,11 +131,11 @@ def test_flow_keeps_major_version_one_and_declares_the_minor_bump():
     ``async_migrate_entry`` for a 1.1 entry at all.
     """
     assert TholzFairlandConfigFlow.VERSION == CONFIG_ENTRY_VERSION == 1
-    assert TholzFairlandConfigFlow.MINOR_VERSION == CONFIG_ENTRY_MINOR_VERSION == 2
+    assert TholzFairlandConfigFlow.MINOR_VERSION == CONFIG_ENTRY_MINOR_VERSION == 3
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("minor_version", [CONFIG_ENTRY_MINOR_VERSION, 3])
+@pytest.mark.parametrize("minor_version", [CONFIG_ENTRY_MINOR_VERSION, 4])
 async def test_current_or_newer_minor_version_is_left_untouched(minor_version):
     result, entry, updates = await _migrate(LEGACY_DATA, minor_version=minor_version)
 
@@ -161,7 +161,7 @@ async def test_update_bumps_only_the_minor_version_through_home_assistant():
     (update,) = updates
     assert set(update) == ACCEPTED_UPDATE_KEYS
     assert update["minor_version"] == CONFIG_ENTRY_MINOR_VERSION
-    assert (entry.version, entry.minor_version) == (1, 2)
+    assert (entry.version, entry.minor_version) == (1, 3)
     accepted = set(inspect.signature(ConfigEntries.async_update_entry).parameters)
     assert set(update) <= accepted
 
@@ -175,6 +175,7 @@ async def test_legacy_entry_with_only_a_current_token_gains_a_seed_and_mode():
     # is invented, and the seed is copied from the current token.
     assert dict(entry.data) == {
         **LEGACY_DATA,
+        CONF_COGNITO_CLIENT_SECRET_KEY: "",
         CONF_CREDENTIAL_SEED_REFRESH_TOKEN_KEY: "rt-live",
         CONF_RECOVERY_MODE_KEY: RECOVERY_MODE_INTERACTIVE,
     }
@@ -210,12 +211,9 @@ async def test_credentials_shadowed_in_options_move_into_data():
     _, entry, _ = await _migrate(data, LEGACY_OPTIONS)
 
     # The option values were the effective ones, so they become canonical.
-    for key in (
-        CONF_COGNITO_REFRESH_TOKEN_KEY,
-        CONF_COGNITO_USER_SUB_KEY,
-        CONF_COGNITO_CLIENT_SECRET_KEY,
-    ):
+    for key in (CONF_COGNITO_REFRESH_TOKEN_KEY, CONF_COGNITO_USER_SUB_KEY):
         assert entry.data[key] == LEGACY_OPTIONS[key]
+    assert entry.data[CONF_COGNITO_CLIENT_SECRET_KEY] == ""
     assert entry.data[CONF_CREDENTIAL_SEED_REFRESH_TOKEN_KEY] == "rt-seed"
     # Only the polling interval may live in options.
     assert dict(entry.options) == {CONF_POLLING_INTERVAL_KEY: 60}
@@ -251,8 +249,9 @@ async def test_empty_option_values_are_dropped_without_erasing_data(empty):
 
     _, entry, _ = await _migrate(LEGACY_DATA, options)
 
-    for key in options:
+    for key in (CONF_COGNITO_REFRESH_TOKEN_KEY, CONF_COGNITO_USER_SUB_KEY):
         assert entry.data[key] == LEGACY_DATA[key]
+    assert entry.data[CONF_COGNITO_CLIENT_SECRET_KEY] == ""
     assert dict(entry.options) == {}
 
 
@@ -381,7 +380,7 @@ async def test_rerunning_the_migration_is_idempotent():
     assert dict(second.data) == dict(first.data)
     assert dict(second.options) == dict(first.options)
 
-    # ...and a 1.2 entry is never written again.
+    # ...and a 1.3 entry is never written again.
     hass = SimpleNamespace(config_entries=FakeConfigEntries())
     assert await async_migrate_entry(hass, first) is True
     assert hass.config_entries.updates == []
@@ -456,11 +455,12 @@ async def test_migrated_entry_stays_loadable_by_the_rollback_build(
     _, entry, _ = await _migrate(data, options)
     settings = {**entry.data, **entry.options}
 
-    # Same major version: Home Assistant hands a 1.2 entry to a 1.1 build.
+    # Same major version: Home Assistant hands a 1.3 entry to a 1.1 build.
     assert entry.version == CONFIG_ENTRY_VERSION
     # Keys the 1.1 build reads without a default are all still present.
     assert settings[CONF_COGNITO_USER_SUB_KEY]
-    assert settings[CONF_COGNITO_CLIENT_SECRET_KEY]
+    assert CONF_COGNITO_CLIENT_SECRET_KEY in settings
+    assert settings[CONF_COGNITO_CLIENT_SECRET_KEY] == ""
     assert entry.data[CONF_THING_ID_KEY] == THING_ID
     # Both builds resolve the same live token and seed from the migrated entry.
     assert _baseline_credentials(settings) == expected

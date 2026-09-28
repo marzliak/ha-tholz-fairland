@@ -11,8 +11,11 @@ DOMAIN = "tholz_fairland"
 #        cognito_password. The recovery seed keeps its legacy key so a rollback
 #        build keeps operating. Bumping the MAJOR version would make Home
 #        Assistant refuse the entry under rollback (unrecoverable migration_error).
+#   1.3: switches to the app's public Cognito client introduced in Tholz 4.1.0;
+#        the legacy client-secret key is retained as an empty string so rollback
+#        builds can still parse the entry without retaining an obsolete secret.
 CONFIG_ENTRY_VERSION = 1
-CONFIG_ENTRY_MINOR_VERSION = 2
+CONFIG_ENTRY_MINOR_VERSION = 3
 
 CONF_NAME_KEY = "name"
 CONF_POLLING_INTERVAL_KEY = "polling_interval"

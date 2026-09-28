@@ -146,6 +146,11 @@ def _normalize(data: dict, options: dict) -> tuple[dict, dict]:
         data[CONF_RECOVERY_MODE_KEY] = RECOVERY_MODE_INTERACTIVE
         data.pop(CONF_COGNITO_PASSWORD_KEY, None)
 
+    # Tholz 4.1.0 replaced the confidential app client with a public Cognito
+    # client. Preserve the legacy key as empty for rollback parser compatibility,
+    # but never retain or submit the obsolete secret.
+    data[CONF_COGNITO_CLIENT_SECRET_KEY] = ""
+
     return data, options
 
 
@@ -157,7 +162,7 @@ def _build_auth_manager(entry: ConfigEntry) -> FairlandAuthManager:
     return FairlandAuthManager(
         authenticator,
         user_sub=settings[CONF_COGNITO_USER_SUB_KEY],
-        client_secret=settings[CONF_COGNITO_CLIENT_SECRET_KEY],
+        client_secret=None,
         current_token=live_token,
         recovery_token=seed_token,
         username=settings.get(CONF_COGNITO_USERNAME_KEY),

@@ -98,7 +98,7 @@ class FairlandAuthManager:
         authenticator: CognitoAuthenticator,
         *,
         user_sub: str,
-        client_secret: str,
+        client_secret: str | None,
         current_token: str,
         recovery_token: str | None,
         username: str | None = None,
