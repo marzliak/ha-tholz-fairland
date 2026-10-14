@@ -1,0 +1,56 @@
+# Tholz Fairland — OPTIONAL automation examples (release candidate 0.3.0)
+#
+# EN: Nothing here is active until you copy it into Home Assistant and enable it.
+#     Replace entity IDs (default name "Fairland") with your real ones first.
+#     These examples only send persistent notifications. They do not change the
+#     heat pump, circulation water, or schedules.
+#
+# PT-BR: Nada aqui fica ativo até você copiar para o Home Assistant e ativar.
+#     Troque os IDs (nome padrão "Fairland") pelos seus antes de ativar.
+#     Estes exemplos só criam notificações persistentes. Não alteram o
+#     equipamento, a circulação de água nem as agendas.
+#     Veja docs/automations.md.
+
+- id: fairland_example_problem_notify
+  alias: "Fairland — problem reported (opt-in example)"
+  description: >-
+    Notifies when the Problem sensor stays on for 5 minutes.
+    Does not attempt any correction.
+  mode: single
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.fairland_problem
+      to: "on"
+      for:
+        minutes: 5
+  conditions: []
+  actions:
+    - action: persistent_notification.create
+      data:
+        title: "Fairland: problem reported"
+        message: >-
+          Error code: {{ states('sensor.fairland_error_code') }}.
+          Check the manufacturer app or manual. No automatic action was taken.
+        notification_id: fairland_problem_reported
+
+- id: fairland_example_offline_notify
+  alias: "Fairland — device offline (opt-in example)"
+  description: >-
+    Notifies when the Online sensor stays off for 15 minutes.
+    Short cloud outages can cause false alarms; adjust the delay to your case.
+  mode: single
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.fairland_online
+      to: "off"
+      for:
+        minutes: 15
+  conditions: []
+  actions:
+    - action: persistent_notification.create
+      data:
+        title: "Fairland: device offline"
+        message: >-
+          The cloud reports the heat pump offline for 15 minutes.
+          Check the manufacturer app and the device's connection.
+        notification_id: fairland_device_offline

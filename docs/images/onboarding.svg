@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="760" viewBox="0 0 1600 760" role="img" aria-labelledby="onb-title onb-desc">
+  <title id="onb-title">Tholz Fairland setup in four steps</title>
+  <desc id="onb-desc">Setup asks for account e-mail or username and a masked password, optionally a verification value when the account requires one, then a compatible heat pump from the account. It performs a read-only validation before saving credentials. No token fields are shown.</desc>
+  <style>
+    text { font-family: Lato, "Segoe UI", "Helvetica Neue", Arial, sans-serif; font-weight: 300; fill: #EAF4F8; }
+    .title { font-size: 52px; }
+    .sub { font-size: 26px; fill: #9FB8C8; }
+    .h { font-size: 30px; font-weight: 400; }
+    .s { font-size: 24px; fill: #9FB8C8; }
+    .k { font-size: 24px; fill: #D5EEF0; }
+    .num { font-size: 26px; font-weight: 700; fill: #0B1F33; text-anchor: middle; }
+    .card { fill: #10304A; stroke: #1FA7A3; stroke-width: 1.5; }
+    .card-opt { fill: #10304A; stroke: #FF7A59; stroke-width: 1.5; stroke-dasharray: 8 6; }
+    .note { fill: #0F2A42; stroke: #2A5573; stroke-width: 1.5; }
+  </style>
+  <rect width="1600" height="760" fill="#0B1F33"/>
+
+  <text class="title" x="70" y="92">Set up in four steps</text>
+  <text class="sub" x="70" y="138">Setup signs in, lists heat pumps and reads the device once. It does not send any command.</text>
+
+  <!-- Card 1 -->
+  <rect class="card" x="70" y="190" width="320" height="400" rx="18"/>
+  <circle cx="114" cy="236" r="26" fill="#5EE6E0"/><text class="num" x="114" y="244">1</text>
+  <text class="h" x="98" y="314">Sign in</text>
+  <text class="k" x="98" y="364">E-mail or username</text>
+  <text class="k" x="98" y="402">Password (masked)</text>
+  <text class="k" x="98" y="440">Name and polling interval</text>
+  <text class="s" x="98" y="500">No token fields.</text>
+
+  <!-- Card 2 (optional) -->
+  <rect class="card-opt" x="450" y="190" width="320" height="400" rx="18"/>
+  <circle cx="494" cy="236" r="26" fill="#5EE6E0"/><text class="num" x="494" y="244">2</text>
+  <text class="h" x="478" y="314">Verify</text>
+  <text class="s" x="478" y="356">Optional, only when the</text>
+  <text class="s" x="478" y="386">account asks for a code</text>
+  <text class="s" x="478" y="416">or a new password.</text>
+  <text class="s" x="478" y="466">Other sign-in steps:</text>
+  <text class="s" x="478" y="496">finish in the vendor</text>
+  <text class="s" x="478" y="526">app, then try again.</text>
+
+  <!-- Card 3 -->
+  <rect class="card" x="830" y="190" width="320" height="400" rx="18"/>
+  <circle cx="874" cy="236" r="26" fill="#5EE6E0"/><text class="num" x="874" y="244">3</text>
+  <text class="h" x="858" y="314">Pick a heat pump</text>
+  <text class="k" x="858" y="364">Compatible heat pumps</text>
+  <text class="k" x="858" y="402">found in the account.</text>
+  <text class="s" x="858" y="462">One heat pump per</text>
+  <text class="s" x="858" y="492">Home Assistant entry.</text>
+
+  <!-- Card 4 -->
+  <rect class="card" x="1210" y="190" width="320" height="400" rx="18"/>
+  <circle cx="1254" cy="236" r="26" fill="#5EE6E0"/><text class="num" x="1254" y="244">4</text>
+  <text class="h" x="1238" y="314">Read-only check</text>
+  <text class="k" x="1238" y="364">Reads the device state.</text>
+  <text class="k" x="1238" y="402">No command is sent.</text>
+  <text class="s" x="1238" y="462">Credentials are saved</text>
+  <text class="s" x="1238" y="492">only after a valid read.</text>
+
+  <!-- Arrows between cards -->
+  <line x1="394" y1="390" x2="444" y2="390" stroke="#9FB8C8" stroke-width="3"/>
+  <polygon points="444,390 432,383 432,397" fill="#9FB8C8"/>
+  <line x1="774" y1="390" x2="824" y2="390" stroke="#9FB8C8" stroke-width="3"/>
+  <polygon points="824,390 812,383 812,397" fill="#9FB8C8"/>
+  <line x1="1154" y1="390" x2="1204" y2="390" stroke="#9FB8C8" stroke-width="3"/>
+  <polygon points="1204,390 1192,383 1192,397" fill="#9FB8C8"/>
+
+  <!-- Storage note -->
+  <rect class="note" x="70" y="630" width="1460" height="96" rx="18"/>
+  <text class="k" x="98" y="672">Stored in the Home Assistant entry: account e-mail, password and the sign-in session.</text>
+  <text class="k" x="98" y="704">Backups that include the entry contain them too. Options change only the polling interval.</text>
+</svg>

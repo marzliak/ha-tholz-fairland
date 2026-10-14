@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="160" viewBox="0 0 560 160" role="img" aria-labelledby="logo-title logo-desc">
+  <title id="logo-title">Tholz Fairland wordmark for dark themes</title>
+  <desc id="logo-desc">Aqua waves and a coral heat sun mark followed by the words Tholz Fairland in light text, for dark backgrounds.</desc>
+  <style>text { font-family: Lato, "Segoe UI", "Helvetica Neue", Arial, sans-serif; }</style>
+  <g transform="translate(0 36) scale(0.5)">
+    <path d="M48 140 q20 -18 40 0 t40 0 t40 0 t40 0" fill="none" stroke="#5EE6E0" stroke-width="13" stroke-linecap="round"/>
+    <path d="M48 180 q20 -18 40 0 t40 0 t40 0 t40 0" fill="none" stroke="#1FA7A3" stroke-width="13" stroke-linecap="round"/>
+    <path d="M128 52 V64 M104 62 L112 70 M152 62 L144 70" fill="none" stroke="#FF7A59" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="128" cy="92" r="13" fill="#FF7A59"/>
+  </g>
+  <text x="152" y="104" font-size="64" font-weight="300" fill="#EAF4F8">Tholz Fairland</text>
+</svg>

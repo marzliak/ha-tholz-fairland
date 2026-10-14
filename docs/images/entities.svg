@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="ent-title ent-desc">
+  <title id="ent-title">Tholz Fairland entities: writable controls, read-only status and cloud data</title>
+  <desc id="ent-desc">Three groups. Controls: a pool water heater with modes Off, Automatic, Heat and Cold and a target range of 12 to 40 degrees Celsius, and a fan mode select with Silent and Intelligent. Read-only status: ambient, outlet and inlet temperatures, heat pump running, online and problem indicators, and an error code. Read-only cloud data: 24-hour heating time and duty cycle, five schedule entries, active schedule count, schedule version and update time. No energy sensor is provided.</desc>
+  <style>
+    text { font-family: Lato, "Segoe UI", "Helvetica Neue", Arial, sans-serif; font-weight: 300; fill: #EAF4F8; }
+    .title { font-size: 52px; }
+    .sub { font-size: 26px; fill: #9FB8C8; }
+    .colh { font-size: 28px; font-weight: 400; }
+    .tag { font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+    .item { font-size: 25px; font-weight: 400; }
+    .detail { font-size: 21px; fill: #9FB8C8; }
+    .card { fill: #10304A; stroke: #1FA7A3; stroke-width: 1.5; }
+    .card-ro { fill: #0F2A42; stroke: #2A5573; stroke-width: 1.5; }
+    .row { stroke: #1D4460; stroke-width: 1; }
+    .foot { font-size: 22px; fill: #D5EEF0; }
+  </style>
+  <rect width="1600" height="900" fill="#0B1F33"/>
+
+  <text class="title" x="70" y="92">What you get in Home Assistant</text>
+  <text class="sub" x="70" y="138">Writable controls are limited to three settings. Everything else is read-only.</text>
+
+  <!-- Column 1: controls -->
+  <rect class="card" x="70" y="186" width="470" height="590" rx="18"/>
+  <text class="tag" x="98" y="228" fill="#FF8A6B">WRITABLE</text>
+  <text class="colh" x="98" y="270">Controls</text>
+  <line class="row" x1="98" y1="290" x2="512" y2="290"/>
+  <text class="item" x="98" y="334">Pool water heater</text>
+  <text class="detail" x="98" y="368">Modes: Off, Automatic, Heat, Cold</text>
+  <text class="detail" x="98" y="398">Target: 12–40 °C</text>
+  <line class="row" x1="98" y1="426" x2="512" y2="426"/>
+  <text class="item" x="98" y="470">Fan mode</text>
+  <text class="detail" x="98" y="504">Options: Silent, Intelligent</text>
+  <line class="row" x1="98" y1="536" x2="512" y2="536"/>
+  <text class="detail" x="98" y="580">Only mode, target and fan</text>
+  <text class="detail" x="98" y="610">can be changed from HA.</text>
+
+  <!-- Column 2: status -->
+  <rect class="card-ro" x="585" y="186" width="470" height="590" rx="18"/>
+  <text class="tag" x="613" y="228" fill="#5EE6E0">READ-ONLY</text>
+  <text class="colh" x="613" y="270">Status</text>
+  <line class="row" x1="613" y1="290" x2="1027" y2="290"/>
+  <text class="item" x="613" y="334">Temperatures</text>
+  <text class="detail" x="613" y="368">Ambient, outlet and inlet, °C</text>
+  <line class="row" x1="613" y1="396" x2="1027" y2="396"/>
+  <text class="item" x="613" y="440">Heat pump running</text>
+  <text class="detail" x="613" y="474">On or off</text>
+  <line class="row" x1="613" y1="502" x2="1027" y2="502"/>
+  <text class="item" x="613" y="546">Online and problem</text>
+  <text class="detail" x="613" y="580">Connectivity and fault indicators</text>
+  <line class="row" x1="613" y1="608" x2="1027" y2="608"/>
+  <text class="item" x="613" y="652">Error code</text>
+  <text class="detail" x="613" y="686">Device fault code</text>
+
+  <!-- Column 3: cloud data -->
+  <rect class="card-ro" x="1100" y="186" width="470" height="590" rx="18"/>
+  <text class="tag" x="1128" y="228" fill="#5EE6E0">READ-ONLY · CLOUD</text>
+  <text class="colh" x="1128" y="270">Metrics and schedules</text>
+  <line class="row" x1="1128" y1="290" x2="1542" y2="290"/>
+  <text class="item" x="1128" y="334">Heating time, 24 h</text>
+  <text class="detail" x="1128" y="368">Seconds, rolling window</text>
+  <line class="row" x1="1128" y1="396" x2="1542" y2="396"/>
+  <text class="item" x="1128" y="440">Duty cycle, 24 h</text>
+  <text class="detail" x="1128" y="474">Percent, rolling window</text>
+  <line class="row" x1="1128" y1="502" x2="1542" y2="502"/>
+  <text class="item" x="1128" y="546">Schedules 1–5</text>
+  <text class="detail" x="1128" y="580">Event state and start–end times</text>
+  <line class="row" x1="1128" y1="608" x2="1542" y2="608"/>
+  <text class="item" x="1128" y="652">Schedule summary</text>
+  <text class="detail" x="1128" y="686">Active count, version, last update</text>
+
+  <!-- Footer -->
+  <rect x="70" y="800" width="1500" height="60" rx="14" fill="#0F2A42" stroke="#2A5573" stroke-width="1.5"/>
+  <text class="foot" x="98" y="838">No energy or power consumption sensor. Schedules and metrics are read-only.</text>
+</svg>

@@ -1,0 +1,7 @@
+# Test configuration only. Lint rules live in .ruff.toml.
+
+[tool.pytest.ini_options]
+# Home Assistant's pytest plugin expects automatic asyncio mode for its
+# autouse fixtures. Set here so every supported pytest-asyncio version agrees.
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

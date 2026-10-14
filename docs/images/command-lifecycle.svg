@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="800" viewBox="0 0 1600 800" role="img" aria-labelledby="cmd-title cmd-desc">
+  <title id="cmd-title">Tholz Fairland command lifecycle: check, baseline, send, confirm, roll back</title>
+  <desc id="cmd-desc">A setting change is accepted only for mode, target temperature and fan mode. The integration reads the current reported state first, sends only the fields that differ, and reports success only when the heat pump reports the new values and the pending change is cleared within 45 seconds. If the change is not accepted or does not converge, it sends the baseline back and checks again. A refused request is never sent.</desc>
+  <style>
+    text { font-family: Lato, "Segoe UI", "Helvetica Neue", Arial, sans-serif; font-weight: 300; fill: #EAF4F8; }
+    .title { font-size: 52px; }
+    .sub { font-size: 26px; fill: #9FB8C8; }
+    .h { font-size: 28px; font-weight: 400; }
+    .k { font-size: 22px; fill: #D5EEF0; }
+    .num { font-size: 26px; font-weight: 700; fill: #0B1F33; text-anchor: middle; }
+    .card { fill: #10304A; stroke: #1FA7A3; stroke-width: 1.5; }
+    .card-hot { fill: #10304A; stroke: #FF7A59; stroke-width: 1.5; }
+    .ok { fill: #0F2A42; stroke: #5EE6E0; stroke-width: 2; }
+    .bad { fill: #2A1A24; stroke: #FF7A59; stroke-width: 2; }
+    .note { fill: #0F2A42; stroke: #2A5573; stroke-width: 1.5; }
+    .arrow { stroke: #9FB8C8; stroke-width: 3; }
+  </style>
+  <rect width="1600" height="800" fill="#0B1F33"/>
+
+  <text class="title" x="70" y="92">Changing a setting, step by step</text>
+  <text class="sub" x="70" y="138">A change counts as done only when the heat pump reports the new values.</text>
+
+  <!-- Step 1 -->
+  <rect class="card" x="70" y="190" width="250" height="400" rx="18"/>
+  <circle cx="104" cy="230" r="24" fill="#5EE6E0"/><text class="num" x="104" y="238">1</text>
+  <text class="h" x="92" y="302">Check</text>
+  <text class="k" x="92" y="346">Only mode, target</text>
+  <text class="k" x="92" y="376">and fan are sent.</text>
+  <text class="k" x="92" y="416">Target: 12–40 °C.</text>
+  <text class="k" x="92" y="456">An invalid value is</text>
+  <text class="k" x="92" y="486">refused before</text>
+  <text class="k" x="92" y="516">anything is sent.</text>
+
+  <!-- Step 2 -->
+  <rect class="card" x="362" y="190" width="250" height="400" rx="18"/>
+  <circle cx="396" cy="230" r="24" fill="#5EE6E0"/><text class="num" x="396" y="238">2</text>
+  <text class="h" x="384" y="302">Baseline</text>
+  <text class="k" x="384" y="346">A fresh read records</text>
+  <text class="k" x="384" y="376">the current value of</text>
+  <text class="k" x="384" y="406">each field being</text>
+  <text class="k" x="384" y="436">changed. That value</text>
+  <text class="k" x="384" y="466">is restored on</text>
+  <text class="k" x="384" y="496">failure, not a guess.</text>
+
+  <!-- Step 3 -->
+  <rect class="card" x="654" y="190" width="250" height="400" rx="18"/>
+  <circle cx="688" cy="230" r="24" fill="#5EE6E0"/><text class="num" x="688" y="238">3</text>
+  <text class="h" x="676" y="302">Send</text>
+  <text class="k" x="676" y="346">Only fields that</text>
+  <text class="k" x="676" y="376">differ from the</text>
+  <text class="k" x="676" y="406">reported state are</text>
+  <text class="k" x="676" y="436">sent, in one update.</text>
+  <text class="k" x="676" y="476">Unchanged fields</text>
+  <text class="k" x="676" y="506">are left out.</text>
+
+  <!-- Step 4 -->
+  <rect class="card" x="946" y="190" width="250" height="400" rx="18"/>
+  <circle cx="980" cy="230" r="24" fill="#5EE6E0"/><text class="num" x="980" y="238">4</text>
+  <text class="h" x="968" y="302">Confirm</text>
+  <text class="k" x="968" y="346">Reported state must</text>
+  <text class="k" x="968" y="376">match each changed</text>
+  <text class="k" x="968" y="406">field. The pending</text>
+  <text class="k" x="968" y="436">change must clear.</text>
+  <text class="k" x="968" y="476">Time limit: 45 s.</text>
+
+  <!-- Step 5 -->
+  <rect class="card-hot" x="1238" y="190" width="250" height="400" rx="18"/>
+  <circle cx="1272" cy="230" r="24" fill="#FF7A59"/><text class="num" x="1272" y="238">5</text>
+  <text class="h" x="1260" y="302">Roll back</text>
+  <text class="k" x="1260" y="346">If the update is not</text>
+  <text class="k" x="1260" y="376">accepted, or does not</text>
+  <text class="k" x="1260" y="406">confirm in time, the</text>
+  <text class="k" x="1260" y="436">baseline is sent back</text>
+  <text class="k" x="1260" y="466">and must confirm too.</text>
+
+  <!-- Arrows between steps -->
+  <line class="arrow" x1="324" y1="390" x2="354" y2="390"/><polygon points="356,390 344,384 344,396" fill="#9FB8C8"/>
+  <line class="arrow" x1="616" y1="390" x2="646" y2="390"/><polygon points="648,390 636,384 636,396" fill="#9FB8C8"/>
+  <line class="arrow" x1="908" y1="390" x2="938" y2="390"/><polygon points="940,390 928,384 928,396" fill="#9FB8C8"/>
+  <line class="arrow" x1="1200" y1="390" x2="1230" y2="390"/><polygon points="1232,390 1220,384 1220,396" fill="#9FB8C8"/>
+
+  <!-- Outcomes -->
+  <rect class="ok" x="70" y="622" width="740" height="108" rx="18"/>
+  <text class="h" x="98" y="666">Confirmed</text>
+  <text class="k" x="98" y="704">The new values are shown. Success is reported only here.</text>
+
+  <rect class="bad" x="830" y="622" width="700" height="108" rx="18"/>
+  <text class="h" x="858" y="666">Not confirmed</text>
+  <text class="k" x="858" y="704">An error is raised. If the rollback also fails, the error says so.</text>
+
+  <rect class="note" x="70" y="750" width="1460" height="34" rx="12"/>
+  <text class="k" x="98" y="774" style="font-size:19px">Refused before step 3: no command is sent.</text>
+</svg>

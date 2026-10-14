@@ -2,9 +2,9 @@ name: Test and lint
 
 on:
   push:
-    branches: [main]
+    branches: [homolog, main]
   pull_request:
-    branches: [main]
+    branches: [homolog, main]
   workflow_dispatch:
 
 permissions:
@@ -13,19 +13,43 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: "3.13"
+            requirements: requirements.txt
+            home_assistant: "2025.2.4"
+          - python: "3.14"
+            requirements: requirements-ha2026.txt
+            home_assistant: "2026.10.1"
+    name: Home Assistant ${{ matrix.home_assistant }}
+    env:
+      PYTHONDONTWRITEBYTECODE: "1"
+      RUFF_NO_CACHE: "true"
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python }}
           cache: pip
+          cache-dependency-path: ${{ matrix.requirements }}
       - name: Install dependencies
-        run: python3 -m pip install -r requirements.txt
-      - name: Run tests
-        run: python3 -m pytest -p no:cacheprovider
+        env:
+          REQUIREMENTS_FILE: ${{ matrix.requirements }}
+        run: python3 -m pip install -r "$REQUIREMENTS_FILE"
+      - name: Run tests with real network access disabled
+        run: python3 -m pytest -p no:cacheprovider --disable-socket --allow-unix-socket
       - name: Run Ruff
         run: python3 -m ruff check .
       - name: Check formatting
         run: python3 -m ruff format --check .
+      - name: Verify local release archives are reproducible (not published)
+        run: |
+          python3 scripts/build_release.py --out-dir "$RUNNER_TEMP/release-a"
+          python3 scripts/build_release.py --out-dir "$RUNNER_TEMP/release-b"
+          diff -r "$RUNNER_TEMP/release-a" "$RUNNER_TEMP/release-b"

@@ -751,7 +751,9 @@ class FairlandCloudClient:
             try:
                 self._publish_changes(changes)
                 return self._wait_for_convergence(changes)
-            except FairlandCloudProtocolError:
+            except FairlandCloudError:
+                # Any failure after publish (protocol, transient or auth) may
+                # leave the device at the requested state; always try to restore.
                 try:
                     self._publish_changes(baseline)
                     self._wait_for_convergence(baseline)

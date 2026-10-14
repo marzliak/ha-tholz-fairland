@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import Platform
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.helpers import config_validation as cv
 
 from .cloud.auth_manager import CredentialUpdate, FairlandAuthManager, RecoveryMode
 from .cloud.client import (
@@ -39,6 +40,8 @@ from .utils.const import (
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 _LOGGER = logging.getLogger(__name__)
 

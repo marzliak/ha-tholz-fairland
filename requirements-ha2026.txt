@@ -1,0 +1,12 @@
+# Verified compatibility test stack for Home Assistant Core 2026.10.1.
+# boto3/botocore match Core's official requirements_all.txt constraints.
+awsiotsdk==1.31.0
+boto3==1.42.97
+botocore==1.42.97
+homeassistant==2026.10.1
+pycognito==2024.5.1
+pytest==9.0.3
+pytest-asyncio==1.4.0
+pytest-homeassistant-custom-component==0.13.372
+pytest-socket==0.8.1
+ruff==0.15.22

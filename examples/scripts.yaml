@@ -1,0 +1,42 @@
+# Tholz Fairland — OPTIONAL manual script example (release candidate 0.3.0)
+#
+# EN: This script runs only when you run it. It sends a real command to the
+#     heat pump. Target temperature must be between 12 and 40 °C. Check the
+#     value before running it. Replace the entity ID (default name "Fairland").
+#
+# PT-BR: Este script só roda quando você o executa. Ele envia um comando real
+#     à bomba de calor. A temperatura-alvo deve estar entre 12 e 40 °C.
+#     Troque o entity_id (nome padrão "Fairland") pelo seu.
+#     Veja docs/automations.md.
+
+fairland_set_pool_temperature:
+  alias: "Fairland — set target temperature (manual)"
+  description: >-
+    Manually sets the target temperature of the Fairland water heater.
+    Refuses values outside 12–40 °C before sending any command.
+  mode: single
+  fields:
+    temperature:
+      name: Target temperature
+      description: "Between 12 and 40 °C. Confirm the value before running."
+      required: true
+      selector:
+        number:
+          min: 12
+          max: 40
+          step: 1
+          unit_of_measurement: "°C"
+          mode: box
+  sequence:
+    - if:
+        - condition: template
+          value_template: >-
+            {{ temperature | float(-1) < 12 or temperature | float(-1) > 40 }}
+      then:
+        - stop: "Target temperature must be between 12 and 40 °C. No command was sent."
+          error: true
+    - action: water_heater.set_temperature
+      target:
+        entity_id: water_heater.fairland_pool
+      data:
+        temperature: "{{ temperature | float }}"

@@ -667,6 +667,42 @@ def test_fresh_baseline_does_not_turn_stale_fields_into_commands(monkeypatch):
     assert published == [{"opMode": 2}]
 
 
+@pytest.mark.parametrize(
+    "transient_error",
+    [FairlandCloudError("transient token failure"), FairlandCloudAuthError("auth")],
+)
+def test_non_protocol_failure_after_publish_still_restores_baseline(
+    monkeypatch, transient_error
+):
+    dummy_credential = "not-a-real-credential"
+    client = FairlandCloudClient(
+        thing_id="thing",
+        user_sub="user",
+        client_secret=dummy_credential,
+        refresh_token=dummy_credential,
+    )
+    client._last_reported = BASELINE
+    published = []
+
+    monkeypatch.setattr(client, "get_status", lambda: BASELINE)
+    monkeypatch.setattr(client, "_ensure_connection", lambda: None)
+    monkeypatch.setattr(client, "_publish_changes", published.append)
+
+    def wait(changes):
+        if changes == {"opMode": 2}:
+            raise transient_error
+        return BASELINE
+
+    monkeypatch.setattr(client, "_wait_for_convergence", wait)
+    requested = json.loads(json.dumps(BASELINE))
+    requested["heatings"]["heat0"]["opMode"] = 2
+
+    with pytest.raises(type(transient_error)):
+        client.set_status(requested)
+
+    assert published == [{"opMode": 2}, {"opMode": 0}]
+
+
 def test_metrics_summary_filters_heat0_and_rolling_window():
     now_ms = 200_000_000
     cutoff_ms = now_ms - (24 * 60 * 60 * 1000)

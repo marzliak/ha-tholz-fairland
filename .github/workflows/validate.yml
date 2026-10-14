@@ -2,9 +2,9 @@ name: Home Assistant validation
 
 on:
   push:
-    branches: [main]
+    branches: [homolog, main]
   pull_request:
-    branches: [main]
+    branches: [homolog, main]
   workflow_dispatch:
   schedule:
     - cron: "0 0 * * 0"
@@ -18,9 +18,13 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Run hassfest
         uses: home-assistant/actions/hassfest@a7c616ce81ccda50150bf1595786c71b1883fabb # master
 
+  # HACS validation requires a public repository. While this repository is
+  # private the job is skipped by condition; it is never reported as passing.
   hacs:
     if: github.event.repository.private == false
     runs-on: ubuntu-latest

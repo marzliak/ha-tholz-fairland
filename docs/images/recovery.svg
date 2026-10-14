@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="760" viewBox="0 0 1600 760" role="img" aria-labelledby="rec-title rec-desc">
+  <title id="rec-title">Tholz Fairland reconnect flow: stored session, automatic sign-in, interactive reauthentication, same entry</title>
+  <desc id="rec-desc">When the cloud session is no longer valid, the integration first tries the stored session tokens, then an automatic sign-in with the stored password if automatic mode is set. Only when that fails does Home Assistant ask for e-mail and password in a reauthentication dialog. The existing entry, entities and options are kept, and credentials are replaced only after a valid device read.</desc>
+  <style>
+    text { font-family: Lato, "Segoe UI", "Helvetica Neue", Arial, sans-serif; font-weight: 300; fill: #EAF4F8; }
+    .title { font-size: 52px; }
+    .sub { font-size: 26px; fill: #9FB8C8; }
+    .h { font-size: 30px; font-weight: 400; }
+    .s { font-size: 24px; fill: #9FB8C8; }
+    .k { font-size: 24px; fill: #D5EEF0; }
+    .num { font-size: 26px; font-weight: 700; fill: #0B1F33; text-anchor: middle; }
+    .card { fill: #10304A; stroke: #1FA7A3; stroke-width: 1.5; }
+    .card-end { fill: #10304A; stroke: #5EE6E0; stroke-width: 2.5; }
+    .card-ask { fill: #10304A; stroke: #FF7A59; stroke-width: 1.5; }
+    .note { fill: #0F2A42; stroke: #2A5573; stroke-width: 1.5; }
+  </style>
+  <rect width="1600" height="760" fill="#0B1F33"/>
+
+  <text class="title" x="70" y="92">When the cloud session expires</text>
+  <text class="sub" x="70" y="138">Recovery tries what is already stored first. You are asked only when it must be.</text>
+
+  <rect class="card" x="70" y="190" width="320" height="400" rx="18"/>
+  <circle cx="114" cy="236" r="26" fill="#5EE6E0"/><text class="num" x="114" y="244">1</text>
+  <text class="h" x="98" y="314">Stored session</text>
+  <text class="k" x="98" y="364">The current session,</text>
+  <text class="k" x="98" y="402">then the backup session.</text>
+  <text class="s" x="98" y="462">No prompt. Each token</text>
+  <text class="s" x="98" y="492">is tried once per cycle.</text>
+
+  <rect class="card" x="450" y="190" width="320" height="400" rx="18"/>
+  <circle cx="494" cy="236" r="26" fill="#5EE6E0"/><text class="num" x="494" y="244">2</text>
+  <text class="h" x="478" y="314">Automatic sign-in</text>
+  <text class="k" x="478" y="364">Automatic mode only,</text>
+  <text class="k" x="478" y="402">using the stored password.</text>
+  <text class="s" x="478" y="462">Rate-limited, so a bad</text>
+  <text class="s" x="478" y="492">password cannot loop.</text>
+
+  <rect class="card-ask" x="830" y="190" width="320" height="400" rx="18"/>
+  <circle cx="874" cy="236" r="26" fill="#FF7A59"/><text class="num" x="874" y="244">3</text>
+  <text class="h" x="858" y="314">Interactive reauth</text>
+  <text class="k" x="858" y="364">Home Assistant asks for</text>
+  <text class="k" x="858" y="402">e-mail and password.</text>
+  <text class="s" x="858" y="462">A verification value is</text>
+  <text class="s" x="858" y="492">requested only if needed.</text>
+
+  <rect class="card-end" x="1210" y="190" width="320" height="400" rx="18"/>
+  <circle cx="1254" cy="236" r="26" fill="#5EE6E0"/><text class="num" x="1254" y="244">4</text>
+  <text class="h" x="1238" y="314">Same entry</text>
+  <text class="k" x="1238" y="364">Entry, entities and</text>
+  <text class="k" x="1238" y="402">options stay in place.</text>
+  <text class="s" x="1238" y="462">New credentials are saved</text>
+  <text class="s" x="1238" y="492">only after a valid read.</text>
+
+  <line x1="394" y1="390" x2="444" y2="390" stroke="#9FB8C8" stroke-width="3"/>
+  <polygon points="444,390 432,383 432,397" fill="#9FB8C8"/>
+  <line x1="774" y1="390" x2="824" y2="390" stroke="#9FB8C8" stroke-width="3"/>
+  <polygon points="824,390 812,383 812,397" fill="#9FB8C8"/>
+  <line x1="1154" y1="390" x2="1204" y2="390" stroke="#9FB8C8" stroke-width="3"/>
+  <polygon points="1204,390 1192,383 1192,397" fill="#9FB8C8"/>
+
+  <rect class="note" x="70" y="630" width="1460" height="96" rx="18"/>
+  <text class="k" x="98" y="672">Network or service errors are retried later, with no reauthentication prompt.</text>
+  <text class="k" x="98" y="704">Credential or challenge errors ask for reauthentication once, until you act.</text>
+</svg>

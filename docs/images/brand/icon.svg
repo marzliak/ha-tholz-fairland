@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="icon-title icon-desc">
+  <title id="icon-title">Tholz Fairland integration icon</title>
+  <desc id="icon-desc">Navy rounded tile with two aqua waves beneath a coral heat core that radiates three short rays.</desc>
+  <rect width="256" height="256" rx="56" fill="#0B1F33"/>
+  <path d="M48 140 q20 -18 40 0 t40 0 t40 0 t40 0" fill="none" stroke="#5EE6E0" stroke-width="13" stroke-linecap="round"/>
+  <path d="M48 180 q20 -18 40 0 t40 0 t40 0 t40 0" fill="none" stroke="#1FA7A3" stroke-width="13" stroke-linecap="round"/>
+  <path d="M128 52 V64 M104 62 L112 70 M152 62 L144 70" fill="none" stroke="#FF7A59" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="128" cy="92" r="13" fill="#FF7A59"/>
+</svg>

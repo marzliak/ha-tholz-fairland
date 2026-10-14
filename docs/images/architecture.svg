@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="860" viewBox="0 0 1600 860" role="img" aria-labelledby="arch-title arch-desc">
+  <title id="arch-title">Tholz Fairland architecture: account, Home Assistant, vendor cloud and heat pump</title>
+  <desc id="arch-desc">Your account signs in at setup, and again only when re-authentication is needed. The Home Assistant integration sends allowed commands to the vendor cloud and receives state and metrics back. The cloud relays allowed changes to the pool heat pump, which reports its state back to the cloud. The vendor app uses the same cloud independently of Home Assistant. A safety band states that only mode, target and fan can be written.</desc>
+  <defs>
+    <marker id="arr-coral" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#FF7A59"/>
+    </marker>
+    <marker id="arr-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#5EE6E0"/>
+    </marker>
+  </defs>
+  <style>
+    text { font-family: Lato, "Segoe UI", "Helvetica Neue", Arial, sans-serif; font-weight: 300; fill: #EAF4F8; }
+    .title { font-size: 52px; }
+    .sub { font-size: 26px; fill: #9FB8C8; }
+    .h { font-size: 30px; font-weight: 400; }
+    .s { font-size: 24px; fill: #9FB8C8; }
+    .k { font-size: 24px; fill: #D5EEF0; }
+    .box { fill: #10304A; stroke: #1FA7A3; stroke-width: 1.5; }
+    .box-hot { fill: #10304A; stroke: #5EE6E0; stroke-width: 2.5; }
+    .badge { fill: #FF7A59; }
+    .badge-t { fill: #0B1F33; font-size: 22px; font-weight: 700; text-anchor: middle; }
+    .badge-a { fill: #5EE6E0; }
+    .line-c { stroke: #FF7A59; stroke-width: 3; fill: none; }
+    .line-t { stroke: #5EE6E0; stroke-width: 3; fill: none; }
+    .panel { fill: #0F2A42; stroke: #2A5573; stroke-width: 1.5; }
+  </style>
+  <rect width="1600" height="860" fill="#0B1F33"/>
+
+  <text class="title" x="70" y="92">How Tholz Fairland connects</text>
+  <text class="sub" x="70" y="138">All traffic goes through the vendor cloud. Home Assistant never talks to the heat pump directly.</text>
+
+  <!-- Boxes -->
+  <rect class="box" x="50" y="200" width="300" height="200" rx="18"/>
+  <text class="h" x="74" y="250">Your account</text>
+  <text class="s" x="74" y="292">E-mail and password</text>
+  <text class="s" x="74" y="324">entered at setup</text>
+
+  <rect class="box-hot" x="450" y="200" width="300" height="200" rx="18"/>
+  <text class="h" x="474" y="250">Home Assistant</text>
+  <text class="k" x="474" y="292">Tholz Fairland</text>
+  <text class="s" x="474" y="324">heater, sensors, modes</text>
+
+  <rect class="box" x="850" y="200" width="300" height="200" rx="18"/>
+  <text class="h" x="874" y="250">Vendor cloud</text>
+  <text class="s" x="874" y="292">sign-in and device</text>
+  <text class="s" x="874" y="324">state, 24 h metrics</text>
+
+  <rect class="box" x="1250" y="200" width="300" height="200" rx="18"/>
+  <text class="h" x="1274" y="250">Pool heat pump</text>
+  <text class="s" x="1274" y="292">reports its state</text>
+  <text class="s" x="1274" y="324">applies safe changes</text>
+
+  <!-- Arrow 1: sign-in -->
+  <line x1="356" y1="300" x2="444" y2="300" stroke="#9FB8C8" stroke-width="3" marker-end="url(#arr-teal)"/>
+  <circle class="badge" cx="400" cy="256" r="18"/><text class="badge-t" x="400" y="263">1</text>
+
+  <!-- Arrow 2: commands out (coral) and telemetry back (aqua) -->
+  <line x1="756" y1="284" x2="844" y2="284" class="line-c" marker-end="url(#arr-coral)"/>
+  <line x1="844" y1="316" x2="756" y2="316" class="line-t" marker-end="url(#arr-teal)"/>
+  <circle class="badge" cx="800" cy="246" r="18"/><text class="badge-t" x="800" y="253">2</text>
+  <circle class="badge-a badge" cx="800" cy="356" r="18"/><text class="badge-t" x="800" y="363">3</text>
+
+  <!-- Arrow 3: allowed changes out (coral) and reported state back (aqua) -->
+  <line x1="1156" y1="284" x2="1244" y2="284" class="line-c" marker-end="url(#arr-coral)"/>
+  <line x1="1244" y1="316" x2="1156" y2="316" class="line-t" marker-end="url(#arr-teal)"/>
+  <circle class="badge" cx="1200" cy="246" r="18"/><text class="badge-t" x="1200" y="253">4</text>
+  <circle class="badge-a badge" cx="1200" cy="356" r="18"/><text class="badge-t" x="1200" y="363">5</text>
+
+  <!-- Vendor app connector -->
+  <rect class="box" x="850" y="480" width="300" height="120" rx="18"/>
+  <text class="h" x="874" y="526">Vendor app</text>
+  <text class="s" x="874" y="562">same cloud, own account</text>
+  <line x1="1000" y1="400" x2="1000" y2="480" stroke="#9FB8C8" stroke-width="2.5" stroke-dasharray="6 6"/>
+  <circle class="badge" cx="1036" cy="440" r="18"/><text class="badge-t" x="1036" y="447">6</text>
+
+  <!-- Key -->
+  <text class="h" x="70" y="508">Key</text>
+  <circle class="badge" cx="92" cy="548" r="16"/><text class="badge-t" x="92" y="554" style="font-size:19px">1</text>
+  <text class="k" x="124" y="556">Sign-in, at setup or reauthentication</text>
+  <circle class="badge" cx="92" cy="596" r="16"/><text class="badge-t" x="92" y="602" style="font-size:19px">2</text>
+  <text class="k" x="124" y="604">Allowed commands, Home Assistant to cloud</text>
+  <circle class="badge-a badge" cx="92" cy="644" r="16"/><text class="badge-t" x="92" y="650" style="font-size:19px">3</text>
+  <text class="k" x="124" y="652">Entity state and metrics, cloud to Home Assistant</text>
+  <circle class="badge" cx="92" cy="692" r="16"/><text class="badge-t" x="92" y="698" style="font-size:19px">4</text>
+  <text class="k" x="124" y="700">Allowed changes, cloud to heat pump</text>
+  <circle class="badge-a badge" cx="92" cy="740" r="16"/><text class="badge-t" x="92" y="746" style="font-size:19px">5</text>
+  <text class="k" x="124" y="748">Reported state, heat pump to cloud</text>
+  <circle class="badge" cx="92" cy="788" r="16"/><text class="badge-t" x="92" y="794" style="font-size:19px">6</text>
+  <text class="k" x="124" y="796">Vendor app, same cloud, independent</text>
+
+  <!-- Safety panel -->
+  <rect class="panel" x="850" y="640" width="700" height="170" rx="18"/>
+  <text class="h" x="874" y="686">Safety</text>
+  <text class="k" x="874" y="726">Only mode, target and fan can be written.</text>
+  <text class="k" x="874" y="758">A change counts only when the reported</text>
+  <text class="k" x="874" y="790">state matches it. Otherwise: rollback.</text>
+</svg>
