@@ -1,14 +1,16 @@
 """Fairland fan-mode selector."""
 
 from homeassistant.components.select import SelectEntity
+from homeassistant.exceptions import HomeAssistantError
 
+from ...cloud.client_manager import FairlandManagerClosedError
 from ...utils.const import CONF_NAME_KEY, DOMAIN, ENTITIES_SCAN_INTERVAL
 from ...utils.device import get_device_info
 from ...utils.dict import get_in, set_in
 from .const import HEATING_FAN_MODE, HEATING_TYPE
 from .utils import get_heating_type, get_valid_heatings
 
-FAN_MODE_TO_OPTION = {
+FAN_MODE_TO_OPTION: dict[int, str] = {
     HEATING_FAN_MODE.SILENCIOSO: "Silent",
     HEATING_FAN_MODE.INTELIGENTE: "Intelligent",
 }
@@ -34,26 +36,39 @@ class HeatingFanModeSelect(SelectEntity):
         self._manager = manager
         self._attr_device_info = device_info
         self._heating_key = heating_key
-        self._state = state
+        self._state = state if isinstance(state, dict) else {}
         self._attr_name = f"{entry.data.get(CONF_NAME_KEY)} Fan mode"
         self._attr_icon = "mdi:fan"
         self._attr_should_poll = True
         self._attr_scan_interval = ENTITIES_SCAN_INTERVAL
 
     async def async_update(self):
-        data = await self._manager.get_status()
-        if data:
-            self._state = get_in(data, self._heating_key)
+        data = await self._manager.get_sensor_status()
+        state = get_in(data, self._heating_key)
+        self._state = state if isinstance(state, dict) else {}
 
     async def async_select_option(self, option):
         if option not in _OPTION_TO_FAN_MODE:
             return
-        next_state = {"fanMode": int(_OPTION_TO_FAN_MODE[option])}
-        result = await self._manager.set_status(
-            set_in({}, self._heating_key, next_state)
-        )
+
+        try:
+            result = await self._manager.set_status(
+                set_in(
+                    {}, self._heating_key, {"fanMode": int(_OPTION_TO_FAN_MODE[option])}
+                )
+            )
+        except FairlandManagerClosedError as exc:
+            raise HomeAssistantError(str(exc)) from exc
         if result:
-            self._state = get_in(result, self._heating_key)
+            state = get_in(result, self._heating_key)
+            self._state = state if isinstance(state, dict) else {}
+
+    @property
+    def available(self):
+        return (
+            self._manager.is_fresh
+            and get_heating_type(self._state) == HEATING_TYPE.TROCADOR_CALOR_FAIRLAND
+        )
 
     @property
     def options(self):
@@ -61,7 +76,12 @@ class HeatingFanModeSelect(SelectEntity):
 
     @property
     def current_option(self):
-        return FAN_MODE_TO_OPTION.get(self._state.get("fanMode"))
+        if not self.available:
+            return None
+        value = self._state.get("fanMode")
+        if isinstance(value, bool) or not isinstance(value, int):
+            return None
+        return FAN_MODE_TO_OPTION.get(value)
 
     @property
     def unique_id(self):

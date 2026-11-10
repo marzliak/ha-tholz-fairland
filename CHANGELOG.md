@@ -53,6 +53,15 @@ User-visible changes to Tholz Fairland for Home Assistant.
 - Local distribution packaging and automated checks for the prepared source and integration archives.
 - Explicit attribution to Felippe Rodrigo Puhle and the original tholz-hass-integration project in both language READMEs, with the original MIT notice retained.
 
+### Command and read reliability
+
+- Send only the field requested by each temperature, operation-mode or fan action, preventing another setting from being replayed from an old entity snapshot.
+- Validate command intent before transport and determine changes against a fresh baseline inside the client transaction; already-reported values require convergence without a duplicate write.
+- Mark failed, invalid or expired reads unavailable, using a monotonic age limit; command acknowledgement does not refresh sensor-read validity.
+- Keep confirmed control values across entity updates without renewing temperature-read validity, and refuse queued commands after the integration is unloaded.
+- Reject malformed and non-finite temperatures while retaining valid zero readings.
+- Adapt read-validation and command-state principles from upstream work by the original project and its contributors ([#93](https://github.com/felippepuhle/tholz-hass-integration/pull/93), [#96](https://github.com/felippepuhle/tholz-hass-integration/pull/96)); preserve the original MIT notice.
+
 ### Security and limitations
 
 - The account password and reusable session credentials are retained in Home Assistant configuration-entry storage for unattended recovery. Password inputs are masked; storage and backups require protection.

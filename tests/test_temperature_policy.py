@@ -193,10 +193,10 @@ def test_mode_only_never_adds_or_normalizes_setpoint(monkeypatch):
     client, calls = _command_client(
         monkeypatch, cached, _reported(opMode=2, sp=360, stepSp=0)
     )
-    requested = deepcopy(cached)
-    requested["heatings"]["heat0"]["opMode"] = 5
+    requested = {"heatings": {"heat0": {"opMode": 5}}}
     client.set_status(requested)
     assert calls["published"] == [{"opMode": 5}]
+    assert calls["read"] == 1
 
 
 def test_fresh_safe_mode_can_accept_an_intent_from_an_older_mode(monkeypatch):

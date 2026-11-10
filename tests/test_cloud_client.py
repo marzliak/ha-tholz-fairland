@@ -633,8 +633,7 @@ def test_failed_convergence_restores_baseline(monkeypatch):
         return BASELINE
 
     monkeypatch.setattr(client, "_wait_for_convergence", wait)
-    requested = json.loads(json.dumps(BASELINE))
-    requested["heatings"]["heat0"]["opMode"] = 2
+    requested = {"heatings": {"heat0": {"opMode": 2}}}
 
     with pytest.raises(FairlandCloudProtocolError):
         client.set_status(requested)
@@ -660,8 +659,7 @@ def test_fresh_baseline_does_not_turn_stale_fields_into_commands(monkeypatch):
     monkeypatch.setattr(client, "_publish_changes", published.append)
     monkeypatch.setattr(client, "_wait_for_convergence", lambda _changes: fresh)
 
-    requested = json.loads(json.dumps(BASELINE))
-    requested["heatings"]["heat0"]["opMode"] = 2
+    requested = {"heatings": {"heat0": {"opMode": 2}}}
     client.set_status(requested)
 
     assert published == [{"opMode": 2}]
@@ -694,8 +692,7 @@ def test_non_protocol_failure_after_publish_still_restores_baseline(
         return BASELINE
 
     monkeypatch.setattr(client, "_wait_for_convergence", wait)
-    requested = json.loads(json.dumps(BASELINE))
-    requested["heatings"]["heat0"]["opMode"] = 2
+    requested = {"heatings": {"heat0": {"opMode": 2}}}
 
     with pytest.raises(type(transient_error)):
         client.set_status(requested)

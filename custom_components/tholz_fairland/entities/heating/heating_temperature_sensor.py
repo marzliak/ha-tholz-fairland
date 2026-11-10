@@ -11,7 +11,7 @@ from ...utils.const import CONF_NAME_KEY, DOMAIN, ENTITIES_SCAN_INTERVAL
 from ...utils.device import get_device_info
 from ...utils.dict import get_in
 from .const import HEATING_TYPE
-from .utils import get_heating_type, get_valid_heatings
+from .utils import get_heating_type, get_native_temperature, get_valid_heatings
 
 _TEMPERATURES = {
     "t1": "Ambient temperature",
@@ -59,14 +59,19 @@ class HeatingTemperatureSensor(SensorEntity):
         self._attr_scan_interval = ENTITIES_SCAN_INTERVAL
 
     async def async_update(self):
-        data = await self._manager.get_status()
-        if data:
-            self._state = get_in(data, self._heating_key)
+        data = await self._manager.get_sensor_status()
+        state = get_in(data, self._heating_key) if data else None
+        self._state = state if isinstance(state, dict) else {}
 
     @property
     def native_value(self):
-        raw = self._state.get(self._sensor_key)
-        return raw / 10 if raw is not None else None
+        if not self._manager.is_fresh:
+            return None
+        return get_native_temperature(self._state.get(self._sensor_key))
+
+    @property
+    def available(self):
+        return self.native_value is not None
 
     @property
     def state(self):

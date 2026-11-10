@@ -63,6 +63,9 @@ HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
 
 ERR_WRITE_PATH = "cloud writes must target heatings.heat0"
+ERR_WRITE_FIELDS = (
+    "cloud commands must contain only explicitly requested writable fields"
+)
 ERR_INTEGER_FIELD = "writable Fairland fields must be integers"
 ERR_OPERATION_MODE = "unsupported Fairland operation mode"
 ERR_FAN_MODE = "unsupported Fairland fan mode"
@@ -106,35 +109,48 @@ class IotAuthorizer:
     signature: str = field(repr=False)
 
 
-def extract_mutable_changes(
-    payload: dict[str, Any], current: dict[str, Any] | None
+def validate_mutable_intent(
+    payload: dict[str, Any], *, strict: bool = False
 ) -> dict[str, int]:
-    """Return only changed, writable fields from a legacy-shaped payload."""
+    """Validate the explicitly requested writable fields before any network IO."""
     try:
         requested = payload["heatings"]["heat0"]
     except (KeyError, TypeError) as exc:
         raise FairlandCloudProtocolError(ERR_WRITE_PATH) from exc
-
     if not isinstance(requested, dict):
         raise FairlandCloudProtocolError(ERR_WRITE_PATH)
-    current_heat = ((current or {}).get("heatings") or {}).get("heat0") or {}
-    changes: dict[str, int] = {}
+    if strict and set(requested) - MUTABLE_HEAT_FIELDS:
+        raise FairlandCloudProtocolError(ERR_WRITE_FIELDS)
+
+    intent: dict[str, int] = {}
     for key in MUTABLE_HEAT_FIELDS:
         if key not in requested:
             continue
         value = requested[key]
         if isinstance(value, bool) or not isinstance(value, int):
             raise FairlandCloudProtocolError(ERR_INTEGER_FIELD)
-        if value == current_heat.get(key):
-            continue
-        changes[key] = value
+        intent[key] = value
 
-    if "opMode" in changes and changes["opMode"] not in VALID_OPERATION_MODES:
+    if "opMode" in intent and intent["opMode"] not in VALID_OPERATION_MODES:
         raise FairlandCloudProtocolError(ERR_OPERATION_MODE)
-    if "fanMode" in changes and changes["fanMode"] not in VALID_FAN_MODES:
+    if "fanMode" in intent and intent["fanMode"] not in VALID_FAN_MODES:
         raise FairlandCloudProtocolError(ERR_FAN_MODE)
-    if "sp" in changes and not MIN_SETPOINT <= changes["sp"] <= MAX_SETPOINT:
+    if "sp" in intent and not MIN_SETPOINT <= intent["sp"] <= MAX_SETPOINT:
         raise FairlandCloudProtocolError(ERR_SETPOINT)
+    if not intent:
+        raise FairlandCloudProtocolError(ERR_NO_CHANGES)
+    return intent
+
+
+def extract_mutable_changes(
+    payload: dict[str, Any], current: dict[str, Any] | None
+) -> dict[str, int]:
+    """Return validated differences without treating booleans as equal integers."""
+    intent = validate_mutable_intent(payload)
+    current_heat = ((current or {}).get("heatings") or {}).get("heat0") or {}
+    changes = {
+        key: value for key, value in intent.items() if value != current_heat.get(key)
+    }
     if not changes:
         raise FairlandCloudProtocolError(ERR_NO_CHANGES)
     return changes
@@ -742,46 +758,39 @@ class FairlandCloudClient:
     def set_status(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Publish an allowlisted delta and require reported-state convergence."""
         with self._lock:
-            if self._last_reported is None:
-                self.get_status()
-            cached_reported = self._last_reported
-            if cached_reported is None:
-                raise FairlandCloudProtocolError(ERR_NO_REPORTED)
-            changes = extract_mutable_changes(payload, None)
-            requested_heat = payload["heatings"]["heat0"]
-            if set(requested_heat) - MUTABLE_HEAT_FIELDS:
-                # Legacy full snapshots retain delta semantics. Narrow entity
-                # payloads express intent; decide their no-op against fresh state.
-                changes = extract_mutable_changes(payload, cached_reported)
-
+            intent = validate_mutable_intent(payload, strict=True)
+            # Determine changes from a fresh read, not an old entity/client
+            # cache. Entity callers send only their single requested field.
             fresh_reported = self.get_status()
             current_heat = fresh_reported["heatings"]["heat0"]
-            if "sp" in changes:
+            if "sp" in intent:
                 try:
-                    temperature_policy(
-                        current_heat, changes.get("opMode")
-                    ).validate_raw(changes["sp"])
+                    temperature_policy(current_heat, intent.get("opMode")).validate_raw(
+                        intent["sp"]
+                    )
                 except FairlandTemperatureError as exc:
                     raise FairlandCloudProtocolError(str(exc)) from exc
-            changes = {
-                key: value
-                for key, value in changes.items()
-                if current_heat.get(key) != value
-            }
-            if not changes:
-                return fresh_reported
             try:
-                baseline = {key: current_heat[key] for key in changes}
+                current = {key: current_heat[key] for key in intent}
             except KeyError as exc:
                 raise FairlandCloudProtocolError(ERR_MISSING_BASELINE) from exc
             try:
-                extract_mutable_changes({"heatings": {"heat0": baseline}}, None)
-                if "sp" in baseline:
-                    # Restoration returns to the original mode, not the mode
-                    # requested by a combined operation-mode/setpoint command.
-                    temperature_policy(current_heat).validate_raw(baseline["sp"])
-            except (FairlandCloudProtocolError, FairlandTemperatureError) as exc:
+                validate_mutable_intent({"heatings": {"heat0": current}})
+            except FairlandCloudProtocolError as exc:
                 raise FairlandCloudProtocolError(ERR_UNSAFE_BASELINE) from exc
+            changes = {
+                key: value for key, value in intent.items() if value != current[key]
+            }
+            if not changes:
+                # A no-op sends nothing, but still checks reported convergence
+                # and an empty delta before claiming successful completion.
+                return self._wait_for_convergence(intent)
+            baseline = {key: current[key] for key in changes}
+            if "sp" in baseline:
+                try:
+                    temperature_policy(current_heat).validate_raw(baseline["sp"])
+                except FairlandTemperatureError as exc:
+                    raise FairlandCloudProtocolError(ERR_UNSAFE_BASELINE) from exc
 
             self._ensure_connection()
             try:

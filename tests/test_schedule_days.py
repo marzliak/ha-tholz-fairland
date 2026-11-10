@@ -69,7 +69,11 @@ def _expected_description(mask):
 
 def _manager(data):
     return SimpleNamespace(
-        get_status=AsyncMock(return_value=data),
+        is_fresh=True,
+        get_sensor_status=AsyncMock(return_value=deepcopy(data)),
+        get_status=AsyncMock(
+            side_effect=AssertionError("Entities must use the cached sensor read")
+        ),
         set_status=AsyncMock(
             side_effect=AssertionError("Schedule writes are forbidden")
         ),
@@ -276,7 +280,8 @@ async def test_polling_only_reads_and_preserves_unrelated_schedule_fields():
     assert entities[6].native_value == 43
     assert initial == before_initial
     assert updated == before_updated
-    assert manager.get_status.await_count == len(entities)
+    assert manager.get_sensor_status.await_count == len(entities)
+    manager.get_status.assert_not_called()
     manager.set_status.assert_not_called()
 
 
@@ -300,4 +305,26 @@ def test_heat_schedule_days_do_not_come_from_weekly_schedule():
     assert entity.extra_state_attributes["repeat_days"] == ["Segunda-feira"]
     assert data == before
     manager.get_status.assert_not_called()
+    manager.set_status.assert_not_called()
+
+
+def test_expired_schedule_hides_old_days_and_recovers_without_recreation():
+    data = _payload(32)
+    before = deepcopy(data)
+    manager = _manager(data)
+    entity = _entities(data, manager)[0]
+    unique_id = entity.unique_id
+    assert entity.available
+    assert entity.extra_state_attributes["repeat_days"] == ["Segunda-feira"]
+    manager.is_fresh = False
+    assert not entity.available
+    assert entity.native_value is None
+    assert entity.extra_state_attributes == {}
+    manager.is_fresh = True
+    assert entity.available
+    assert entity.unique_id == unique_id
+    assert entity.extra_state_attributes["repeat_days"] == ["Segunda-feira"]
+    assert data == before
+    manager.get_status.assert_not_called()
+    manager.get_sensor_status.assert_not_called()
     manager.set_status.assert_not_called()

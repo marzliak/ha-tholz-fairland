@@ -10,6 +10,15 @@
 - State is refreshed periodically (configurable interval). Entities read the latest value held in memory, so Home Assistant does not query the cloud once per entity.
 - Commands follow a controlled cycle, described in [Command lifecycle](#command-lifecycle).
 
+## Read availability
+
+- Entities use the latest valid read rather than making a network request per sensor.
+- A failed read or invalid state makes affected entities **unavailable**, rather than presenting cached values as a current read.
+- Without an explicit failure, a read expires after **3 × the update interval + 5 seconds**, measured with a monotonic clock. A new valid read restores availability without recreating entities. This measures the age of the successful request, not the physical age of the manufacturer measurement.
+- Missing, malformed and non-finite temperatures are not published as valid numbers. **Zero remains a valid reading.**
+- Command acknowledgement alone does not renew sensor-read validity. Metrics and schedules remain subject to their separate caches and timestamps.
+- After confirmation, only the changed controls retain their confirmed values until the next read, avoiding a temporary visual return to an older value. This does not renew temperature-read age; failure or expiry still makes the entities unavailable.
+
 ## Entities created
 
 Names below use the prefix you chose during setup (shown here as `<name>`). The names are the ones the integration creates in this release: the heater, fan, temperature and indicator entities use **English**; the 24-hour metrics and schedules use **Portuguese**. Entity IDs derive from these names and receive a numeric suffix if an entity with the same name already exists. Examples in these guides use the default name `Fairland`, for example `water_heater.fairland_pool`.
@@ -74,6 +83,7 @@ Important:
 - **Authentication/authorization:** HTTP **401/403** responses propagate as an authentication error; they are not hidden as an optional metrics failure.
 - Results depend on the records received; they do not guarantee a complete history or equivalence to every app chart. **They do not measure energy, power, kWh, cost or efficiency.**
 
+
 ## Schedules: read-only
 
 - The schedules (`Agenda 1` to `Agenda 5`) are **read-only**. You can view them in Home Assistant but **cannot edit them** there.
@@ -123,13 +133,14 @@ Automations that previously relied only on the general 12–40 °C range may now
 ![Illustrative command lifecycle: baseline read, send, convergence, and return to baseline on failure](../images/command-lifecycle.png)
 
 1. The integration **reads the current state** of the device, validates the request and keeps the values it is about to change. An invalid temperature is rejected before sending.
-2. It sends **only** the field being changed.
+2. It sends **only** the field requested by that action: temperature never replays an old mode or fan setting, and mode/fan actions do not replay other controls.
 3. It waits up to **45 seconds** for the reported state. Success requires the reported state to match the requested value **and** no pending change to remain.
 4. If the device does not converge, the integration tries to **restore the previous value**.
 5. If the restore also fails, the message reports that returning to the previous state failed. **Check the device physically.**
 
 Practical consequences:
 
+- If the requested value is already reported and no change is pending, the action confirms that condition without sending another command.
 - The value shown in Home Assistant can take several seconds to change.
 - If the device does not accept the command, the value returns to the previous one.
 - A failed command can leave the device unavailable for a while, even after the restore attempt.

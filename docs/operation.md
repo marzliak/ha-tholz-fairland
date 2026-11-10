@@ -10,6 +10,15 @@
 - O estado é lido periodicamente (intervalo configurável). Cada entidade lê o último valor guardado na memória, então o Home Assistant não faz uma consulta à nuvem por entidade.
 - Os comandos seguem um ciclo controlado, descrito em [Ciclo de um comando](#ciclo-de-um-comando).
 
+## Validade das leituras
+
+- As entidades usam a última leitura válida, sem fazer uma consulta de rede por sensor.
+- Se a leitura falhar ou o estado recebido for inválido, as entidades afetadas ficam **indisponíveis**, em vez de apresentar o cache como leitura atual.
+- Mesmo sem uma falha explícita, uma leitura expira após **3 × o intervalo de atualização + 5 segundos**, contados com relógio monotônico. Uma nova leitura válida recupera a disponibilidade sem recriar entidades. Esse prazo mede a idade da consulta bem-sucedida; não certifica a idade física da medição do fabricante.
+- Temperaturas vazias, em formato incorreto ou não finitas não são publicadas como números válidos. **Zero continua sendo uma leitura válida.**
+- A confirmação de um comando não renova, sozinha, a validade da leitura dos sensores. As métricas e agendas continuam sujeitas aos seus próprios caches e timestamps.
+- Após a confirmação, apenas os controles alterados mantêm os valores confirmados até a próxima leitura, evitando um retorno visual ao valor anterior. Isso não renova a idade das temperaturas; uma falha ou expiração continua tornando as entidades indisponíveis.
+
 ## Entidades criadas
 
 Os nomes abaixo usam o prefixo que você escolheu no cadastro (aqui, `<nome>`). Os nomes são os que a integração cria nesta versão: as entidades do aquecedor, do ventilador, das temperaturas e dos indicadores usam **inglês**; as métricas de 24 horas e as agendas usam **português**. Os IDs de entidade derivam desses nomes e podem receber um sufixo numérico se já existir uma entidade com o mesmo nome. Os exemplos deste guia usam o nome padrão `Fairland`, por exemplo `water_heater.fairland_pool`.
@@ -74,6 +83,7 @@ Importante:
 - **Autenticação/autorização:** respostas HTTP **401/403** são propagadas como erro de autenticação, não ocultadas como uma falha opcional de métricas.
 - O resultado depende dos registros recebidos; não garante histórico completo nem equivalência a todos os gráficos do aplicativo. **Não mede energia, potência, kWh, custo ou eficiência.**
 
+
 ## Agendas: somente leitura
 
 - As agendas (`Agenda 1` a `Agenda 5`) são **somente leitura**. Você as visualiza no Home Assistant, mas **não as edita** por ele.
@@ -123,13 +133,14 @@ Automações que antes usavam apenas a faixa geral de 12–40 °C podem passar a
 ![Diagrama ilustrativo do ciclo de um comando: leitura de base, envio, convergência e retorno à base em caso de falha](images/command-lifecycle.png)
 
 1. A integração **lê o estado atual** do equipamento, valida o pedido e guarda os valores que serão alterados. Uma temperatura inválida é recusada antes do envio.
-2. Envia **somente** o campo alterado.
+2. Envia **somente** o campo solicitado por aquela ação: temperatura não reenvia modo ou ventilador antigos; modo e ventilador também não reenviam outros controles.
 3. Aguarda até **45 segundos** pelo estado reportado. Sucesso exige que o estado reportado coincida com o valor pedido **e** que não haja mudança pendente.
 4. Se o equipamento não convergir, a integração tenta **restaurar o valor anterior**.
 5. Se a restauração também falhar, a mensagem indica falha no retorno ao estado anterior. **Verifique o equipamento fisicamente.**
 
 Consequências práticas:
 
+- Se o valor pedido já for o estado reportado e não houver mudança pendente, a ação confirma essa condição sem reenviar o comando.
 - O valor mostrado no Home Assistant pode demorar alguns segundos para mudar.
 - Se o equipamento não aceitar o comando, o valor volta ao anterior.
 - Um comando com falha pode deixar o equipamento indisponível por algum tempo, mesmo após a tentativa de restauração.

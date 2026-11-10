@@ -1,8 +1,15 @@
 import asyncio
+import copy
 
 import pytest
 
 from custom_components.tholz_fairland.cloud.client_manager import FairlandClientManager
+
+VALID_READ = {
+    "id": 1496,
+    "connected": True,
+    "heatings": {"heat0": {"type": 7, "sp": 330, "t3": 230}},
+}
 
 
 class FakeClient:
@@ -13,7 +20,7 @@ class FakeClient:
 
     def get_status(self):
         self.reads += 1
-        return {"id": 1496}
+        return copy.deepcopy(VALID_READ)
 
     def close(self):
         self.closed = True
@@ -65,7 +72,8 @@ async def test_external_state_change_wakes_polling_manager():
     await asyncio.sleep(0.01)
 
     assert client.reads == 1
-    assert manager._data == {"id": 1496}
+    assert manager._read_data == VALID_READ
+    assert manager.is_fresh
 
     client.callback()
     await asyncio.sleep(0.01)
@@ -73,3 +81,19 @@ async def test_external_state_change_wakes_polling_manager():
     assert client.reads == 2
 
     await manager.stop()
+
+
+@pytest.mark.asyncio
+async def test_stop_invalidates_freshness_and_read_cache():
+    client = FakeClient()
+    manager = FairlandClientManager(client, polling_interval=300)
+    manager.start(FakeHass())
+    await manager.get_status()
+    assert manager.is_fresh
+
+    await manager.stop()
+
+    assert not manager.is_fresh
+    assert manager._read_data is None
+    assert await manager.get_sensor_status() is None
+    assert client.closed is True

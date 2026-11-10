@@ -8,6 +8,7 @@ from homeassistant.components.water_heater import (
 from homeassistant.const import UnitOfTemperature
 from homeassistant.exceptions import HomeAssistantError
 
+from ...cloud.client_manager import FairlandManagerClosedError
 from ...cloud.temperature_policy import (
     FairlandTemperatureError,
     temperature_policy,
@@ -16,13 +17,13 @@ from ...utils.const import CONF_NAME_KEY, DOMAIN, ENTITIES_SCAN_INTERVAL
 from ...utils.device import get_device_info
 from ...utils.dict import get_in, set_in
 from .const import HEATING_OP_MODE, HEATING_TYPE
-from .utils import get_heating_type, get_valid_heatings
+from .utils import get_heating_type, get_native_temperature, get_valid_heatings
 
 FAIRLAND_STATE_AUTOMATIC = "automatic"
 FAIRLAND_STATE_HEAT = "heat"
 FAIRLAND_STATE_COLD = "cold"
 
-_MODE_TO_HA = {
+_MODE_TO_HA: dict[int, str] = {
     HEATING_OP_MODE.DESLIGADO: STATE_OFF,
     HEATING_OP_MODE.AUTOMATICO: FAIRLAND_STATE_AUTOMATIC,
     HEATING_OP_MODE.AQUECER: FAIRLAND_STATE_HEAT,
@@ -42,7 +43,7 @@ def get_heating_water_heaters(hass, entry, manager, data):
 
 
 class HeatingWaterHeater(WaterHeaterEntity):
-    """Control operation mode and target temperature."""
+    """Control operation mode and target temperature without replaying old state."""
 
     def __init__(self, hass, entry, manager, device_info, heating_key, state):
         self._hass = hass
@@ -50,14 +51,14 @@ class HeatingWaterHeater(WaterHeaterEntity):
         self._manager = manager
         self._attr_device_info = device_info
         self._heating_key = heating_key
-        self._state = state
+        self._state = state if isinstance(state, dict) else {}
         self._attr_should_poll = True
         self._attr_scan_interval = ENTITIES_SCAN_INTERVAL
 
     async def async_update(self):
-        data = await self._manager.get_status()
-        if data:
-            self._state = get_in(data, self._heating_key)
+        data = await self._manager.get_sensor_status()
+        state = get_in(data, self._heating_key)
+        self._state = state if isinstance(state, dict) else {}
 
     async def async_set_temperature(self, **kwargs):
         temperature = kwargs.get("temperature")
@@ -67,22 +68,38 @@ class HeatingWaterHeater(WaterHeaterEntity):
             setpoint = temperature_policy(self._state).to_raw(temperature)
         except FairlandTemperatureError as exc:
             raise HomeAssistantError(str(exc)) from exc
-        next_state = {"sp": setpoint}
-        result = await self._manager.set_status(
-            set_in({}, self._heating_key, next_state)
-        )
+        try:
+            result = await self._manager.set_status(
+                set_in({}, self._heating_key, {"sp": setpoint})
+            )
+        except FairlandManagerClosedError as exc:
+            raise HomeAssistantError(str(exc)) from exc
         if result:
-            self._state = get_in(result, self._heating_key)
+            state = get_in(result, self._heating_key)
+            self._state = state if isinstance(state, dict) else {}
 
     async def async_set_operation_mode(self, operation_mode):
         if operation_mode not in _HA_TO_MODE:
             return
-        next_state = {"opMode": _HA_TO_MODE[operation_mode]}
-        result = await self._manager.set_status(
-            set_in({}, self._heating_key, next_state)
-        )
+
+        try:
+            result = await self._manager.set_status(
+                set_in(
+                    {}, self._heating_key, {"opMode": int(_HA_TO_MODE[operation_mode])}
+                )
+            )
+        except FairlandManagerClosedError as exc:
+            raise HomeAssistantError(str(exc)) from exc
         if result:
-            self._state = get_in(result, self._heating_key)
+            state = get_in(result, self._heating_key)
+            self._state = state if isinstance(state, dict) else {}
+
+    @property
+    def available(self):
+        return (
+            self._manager.is_fresh
+            and get_heating_type(self._state) == HEATING_TYPE.TROCADOR_CALOR_FAIRLAND
+        )
 
     @property
     def temperature_unit(self):
@@ -90,13 +107,15 @@ class HeatingWaterHeater(WaterHeaterEntity):
 
     @property
     def current_temperature(self):
-        value = self._state.get("t3")
-        return value / 10 if value is not None else None
+        if not self.available:
+            return None
+        return get_native_temperature(self._state.get("t3"))
 
     @property
     def target_temperature(self):
-        value = self._state.get("sp")
-        return value / 10 if value is not None else None
+        if not self.available:
+            return None
+        return get_native_temperature(self._state.get("sp"))
 
     @property
     def target_temperature_step(self):
@@ -121,7 +140,12 @@ class HeatingWaterHeater(WaterHeaterEntity):
 
     @property
     def current_operation(self):
-        return _MODE_TO_HA.get(self._state.get("opMode"), STATE_OFF)
+        if not self.available:
+            return None
+        value = self._state.get("opMode")
+        if isinstance(value, bool) or not isinstance(value, int):
+            return None
+        return _MODE_TO_HA.get(value)
 
     @property
     def operation_list(self):

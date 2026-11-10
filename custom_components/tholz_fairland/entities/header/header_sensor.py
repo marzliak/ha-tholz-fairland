@@ -30,12 +30,20 @@ class HeaderErrorSensor(SensorEntity):
         self._attr_scan_interval = ENTITIES_SCAN_INTERVAL
 
     async def async_update(self):
-        data = await self._manager.get_status()
-        if data:
-            self._value = data.get("error")
+        data = await self._manager.get_sensor_status()
+        self._value = data.get("error") if data else None
+
+    def _valid_value(self):
+        return isinstance(self._value, int) and not isinstance(self._value, bool)
+
+    @property
+    def available(self):
+        return self._manager.is_fresh and self._valid_value()
 
     @property
     def native_value(self):
+        if not self.available:
+            return None
         return self._value
 
     @property

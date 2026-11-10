@@ -1,5 +1,7 @@
 """Rolling cloud-metric sensors for Fairland heat pumps."""
 
+import math
+
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -35,6 +37,17 @@ def get_cloud_metric_sensors(hass, entry, manager, data):
     ]
 
 
+def _finite_number(value):
+    """Return a real, finite number; reject bool, text, NaN, infinity and overflow."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    try:
+        finite = math.isfinite(float(value))
+    except OverflowError:
+        return None
+    return value if finite else None
+
+
 class CloudMetricSensor(SensorEntity):
     """A cached 24-hour statistic returned by the Tholz metrics API."""
 
@@ -44,7 +57,8 @@ class CloudMetricSensor(SensorEntity):
         self._manager = manager
         self._device_info = device_info
         self._metric_key = metric_key
-        self._summary = data.get("metricsSummary", {})
+        summary = data.get("metricsSummary")
+        self._summary = summary if isinstance(summary, dict) else {}
 
         config = _METRIC_CONFIG[metric_key]
         self._attr_name = f"{entry.data.get(CONF_NAME_KEY)} {config['name']}"
@@ -56,13 +70,19 @@ class CloudMetricSensor(SensorEntity):
         self._attr_scan_interval = ENTITIES_SCAN_INTERVAL
 
     async def async_update(self):
-        data = await self._manager.get_status()
-        if data and isinstance(data.get("metricsSummary"), dict):
-            self._summary = data["metricsSummary"]
+        data = await self._manager.get_sensor_status()
+        summary = data.get("metricsSummary") if data else None
+        self._summary = summary if isinstance(summary, dict) else {}
 
     @property
     def native_value(self):
-        return self._summary.get(self._metric_key)
+        if not self._manager.is_fresh:
+            return None
+        return _finite_number(self._summary.get(self._metric_key))
+
+    @property
+    def available(self):
+        return self.native_value is not None
 
     @property
     def extra_state_attributes(self):

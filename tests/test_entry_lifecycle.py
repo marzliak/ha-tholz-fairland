@@ -111,7 +111,25 @@ class FakeClient:
     def get_status(self):
         if self.status_error is not None:
             raise self.status_error
-        return {"id": 1496}
+        # Use a complete synthetic Fairland snapshot. An id-only placeholder
+        # is not a successful read under the new validity contract.
+        return {
+            "id": 1496,
+            "connected": True,
+            "error": 0,
+            "heatings": {
+                "heat0": {
+                    "type": 7,
+                    "on": False,
+                    "opMode": 0,
+                    "sp": 330,
+                    "fanMode": 1,
+                    "t1": 180,
+                    "t2": 240,
+                    "t3": 230,
+                }
+            },
+        }
 
     def close(self):
         self.closed += 1

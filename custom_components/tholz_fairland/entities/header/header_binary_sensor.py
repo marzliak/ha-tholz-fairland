@@ -47,15 +47,26 @@ class HeaderBinarySensor(BinarySensorEntity):
         self._attr_should_poll = True
         self._attr_scan_interval = ENTITIES_SCAN_INTERVAL
 
+    def _has_valid_value(self):
+        """Return whether the stored value has the type this flag requires."""
+        if self._sensor_key == "connected":
+            return isinstance(self._state, bool)
+        return isinstance(self._state, int) and not isinstance(self._state, bool)
+
     async def async_update(self):
-        data = await self._manager.get_status()
-        if data:
-            self._state = data.get(self._sensor_key)
+        data = await self._manager.get_sensor_status()
+        self._state = data.get(self._sensor_key) if data else None
+
+    @property
+    def available(self):
+        return self._manager.is_fresh and self._has_valid_value()
 
     @property
     def is_on(self):
+        if not self.available:
+            return None
         if self._sensor_key == "error":
-            return self._state not in (0, None, False)
+            return self._state != 0
         return self._state is True
 
     @property

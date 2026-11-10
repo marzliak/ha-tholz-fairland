@@ -58,8 +58,15 @@ class FakeManager:
         self.data = data
         self.payloads = []
 
+    @property
+    def is_fresh(self):
+        return self.data is not None
+
     async def get_status(self):
         return self.data
+
+    async def get_sensor_status(self):
+        return copy.deepcopy(self.data) if self.is_fresh else None
 
     async def set_status(self, payload):
         self.payloads.append(payload)

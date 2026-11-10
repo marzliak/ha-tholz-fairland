@@ -25,7 +25,7 @@ _REPEAT_DAY_BITS = (
 )
 
 
-def decode_repeat_days(mask: int) -> list[str]:
+def decode_repeat_days(mask: object) -> list[str]:
     """Decode a heat0Schedule repeat mask in Monday-to-Sunday order."""
     if (
         not isinstance(mask, int)
@@ -37,12 +37,28 @@ def decode_repeat_days(mask: int) -> list[str]:
     return [day for bit, day in _REPEAT_DAY_BITS if mask & bit]
 
 
+_HOUR_MAX = 23
+_MINUTE_MAX = 59
+
+
+def _is_int(value):
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _as_event(value):
+    return value if isinstance(value, dict) else {}
+
+
 def _format_time(value):
     if not isinstance(value, dict):
         return None
     hour = value.get("hr")
     minute = value.get("min")
-    if not isinstance(hour, int) or not isinstance(minute, int):
+    if isinstance(hour, bool) or not isinstance(hour, int):
+        return None
+    if isinstance(minute, bool) or not isinstance(minute, int):
+        return None
+    if not (0 <= hour <= _HOUR_MAX and 0 <= minute <= _MINUTE_MAX):
         return None
     return f"{hour:02d}:{minute:02d}"
 
@@ -67,14 +83,7 @@ def get_cloud_schedule_sensors(hass, entry, manager, data):
 
     device_info = get_device_info(entry, data)
     entities: list[SensorEntity] = [
-        CloudScheduleSlotSensor(
-            hass,
-            entry,
-            manager,
-            device_info,
-            index,
-            data,
-        )
+        CloudScheduleSlotSensor(hass, entry, manager, device_info, index, data)
         for index in range(_SCHEDULE_EVENT_COUNT)
     ]
     entities.extend(
@@ -88,7 +97,7 @@ def get_cloud_schedule_sensors(hass, entry, manager, data):
 
 
 class _CloudScheduleSensor(SensorEntity):
-    """Shared polling support for schedule entities."""
+    """Shared read-only support for schedule entities."""
 
     def __init__(self, hass, entry, manager, device_info, data):
         self._hass = hass
@@ -99,10 +108,25 @@ class _CloudScheduleSensor(SensorEntity):
         self._attr_should_poll = True
         self._attr_scan_interval = ENTITIES_SCAN_INTERVAL
 
+    @staticmethod
+    def _has_schedule(document):
+        return isinstance(document.get("schedule"), dict)
+
+    def _own_value_valid(self) -> bool:
+        """Return whether this entity's own field is structurally valid."""
+        return True
+
+    @property
+    def available(self):
+        return (
+            self._manager.is_fresh
+            and self._has_schedule(self._data)
+            and self._own_value_valid()
+        )
+
     async def async_update(self):
-        data = await self._manager.get_status()
-        if data and isinstance(data.get("schedule"), dict):
-            self._data = data
+        data = await self._manager.get_sensor_status()
+        self._data = data if data and self._has_schedule(data) else {}
 
 
 class CloudScheduleSlotSensor(_CloudScheduleSensor):
@@ -114,12 +138,25 @@ class CloudScheduleSlotSensor(_CloudScheduleSensor):
         self._key = f"event{index}"
         self._attr_name = f"{entry.data.get(CONF_NAME_KEY)} Agenda {index + 1}"
 
+    def _own_value_valid(self) -> bool:
+        event = self._event
+        return (
+            isinstance(event.get("active"), bool)
+            and _format_time(event.get("turnOn")) is not None
+            and _format_time(event.get("turnOff")) is not None
+        )
+
     @property
     def _event(self):
-        return self._data.get("schedule", {}).get(self._key, {})
+        schedule = self._data.get("schedule")
+        if not isinstance(schedule, dict):
+            return {}
+        return _as_event(schedule.get(self._key))
 
     @property
     def native_value(self):
+        if not self.available:
+            return None
         event = self._event
         start = _format_time(event.get("turnOn")) or "--:--"
         end = _format_time(event.get("turnOff")) or "--:--"
@@ -128,12 +165,16 @@ class CloudScheduleSlotSensor(_CloudScheduleSensor):
 
     @property
     def icon(self):
-        return (
-            "mdi:calendar-check" if self._event.get("active") else "mdi:calendar-remove"
-        )
+        if not self.available:
+            return "mdi:calendar-question"
+        if self._event.get("active") is True:
+            return "mdi:calendar-check"
+        return "mdi:calendar-remove"
 
     @property
     def extra_state_attributes(self):
+        if not self.available:
+            return {}
         event = self._event
         repeat = event.get("rept")
         try:
@@ -168,8 +209,12 @@ class CloudScheduleActiveCountSensor(_CloudScheduleSensor):
 
     @property
     def native_value(self):
-        schedule = self._data.get("schedule", {})
-        return sum(event.get("active") is True for event in schedule.values())
+        if not self.available:
+            return None
+        schedule = self._data["schedule"]
+        return sum(
+            _as_event(event).get("active") is True for event in schedule.values()
+        )
 
     @property
     def unique_id(self):
@@ -185,8 +230,13 @@ class CloudScheduleVersionSensor(_CloudScheduleSensor):
         self._attr_icon = "mdi:source-branch"
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
+    def _own_value_valid(self):
+        return _is_int(self._data.get("scheduleVersion"))
+
     @property
     def native_value(self):
+        if not self.available:
+            return None
         return self._data.get("scheduleVersion")
 
     @property
@@ -204,12 +254,25 @@ class CloudScheduleTimestampSensor(_CloudScheduleSensor):
         self._attr_device_class = SensorDeviceClass.TIMESTAMP
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
+    def _timestamp(self):
+        timestamp = self._data.get("scheduleTimestamp")
+        if isinstance(timestamp, bool) or not isinstance(timestamp, int):
+            return None
+        try:
+            value = datetime.fromtimestamp(timestamp, tz=UTC)
+        except (OverflowError, OSError, ValueError):
+            return None
+        else:
+            return value
+
+    def _own_value_valid(self):
+        return self._timestamp() is not None
+
     @property
     def native_value(self):
-        timestamp = self._data.get("scheduleTimestamp")
-        if not isinstance(timestamp, int) or isinstance(timestamp, bool):
+        if not self.available:
             return None
-        return datetime.fromtimestamp(timestamp, tz=UTC)
+        return self._timestamp()
 
     @property
     def unique_id(self):

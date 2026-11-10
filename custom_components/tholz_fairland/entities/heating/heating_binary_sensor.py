@@ -40,13 +40,19 @@ class HeatingBinarySensor(BinarySensorEntity):
         self._attr_scan_interval = ENTITIES_SCAN_INTERVAL
 
     async def async_update(self):
-        data = await self._manager.get_status()
-        if data:
-            self._state = get_in(data, self._heating_key)
+        data = await self._manager.get_sensor_status()
+        state = get_in(data, self._heating_key) if data else None
+        self._state = state if isinstance(state, dict) else {}
+
+    @property
+    def available(self):
+        return self._manager.is_fresh and isinstance(self._state.get("on"), bool)
 
     @property
     def is_on(self):
-        return self._state.get("on") is True
+        if not self.available:
+            return None
+        return self._state["on"] is True
 
     @property
     def unique_id(self):
