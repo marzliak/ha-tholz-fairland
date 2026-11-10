@@ -175,10 +175,10 @@ def test_fresh_capabilities_reject_invalid_command_before_any_publish(
 
 def test_combined_command_validates_against_requested_mode(monkeypatch):
     client, calls = _command_client(
-        monkeypatch, _reported(opMode=0), _reported(opMode=5)
+        monkeypatch, _reported(opMode=0), _reported(opMode=5, sp=250)
     )
-    client.set_status({"heatings": {"heat0": {"opMode": 4, "sp": 180}}})
-    assert calls["published"] == [{"opMode": 4, "sp": 180}]
+    client.set_status({"heatings": {"heat0": {"opMode": 4, "sp": 380}}})
+    assert calls["published"] == [{"opMode": 4, "sp": 380}]
 
 
 def test_combined_command_rejects_target_that_only_old_mode_accepts(monkeypatch):
@@ -201,7 +201,7 @@ def test_mode_only_never_adds_or_normalizes_setpoint(monkeypatch):
 
 def test_fresh_safe_mode_can_accept_an_intent_from_an_older_mode(monkeypatch):
     client, calls = _command_client(
-        monkeypatch, _reported(opMode=4), _reported(opMode=5)
+        monkeypatch, _reported(opMode=4), _reported(opMode=5, sp=250)
     )
     client.set_status({"heatings": {"heat0": {"sp": 150}}})
     assert calls["published"] == [{"sp": 150}]
@@ -371,3 +371,58 @@ async def test_stale_entity_cannot_replay_unrequested_fields(
         await select.async_select_option(argument)
     assert calls["published"] == [intent]
     assert state == _heat(opMode=2, sp=330, fanMode=1)
+
+
+@pytest.mark.parametrize(
+    "baseline", [50, 450, None, True, False, "330", 330.0, float("nan"), 325]
+)
+def test_unsafe_temperature_baseline_blocks_first_publish(monkeypatch, baseline):
+    client, calls = _command_client(monkeypatch, _reported(), _reported(sp=baseline))
+    with pytest.raises(FairlandCloudProtocolError, match="safe rollback baseline"):
+        client.set_status({"heatings": {"heat0": {"sp": 340}}})
+    assert calls == {"published": [], "read": 1}
+
+
+@pytest.mark.parametrize(
+    ("baseline", "intent"),
+    [
+        ({"opMode": True}, {"opMode": 4}),
+        ({"opMode": 99}, {"opMode": 4}),
+        ({"fanMode": None}, {"fanMode": 1}),
+        ({"fanMode": True}, {"fanMode": 0}),
+    ],
+)
+def test_invalid_mode_or_fan_baseline_also_blocks_first_publish(
+    monkeypatch, baseline, intent
+):
+    client, calls = _command_client(monkeypatch, _reported(), _reported(**baseline))
+    with pytest.raises(FairlandCloudProtocolError, match="safe rollback baseline"):
+        client.set_status({"heatings": {"heat0": intent}})
+    assert calls["published"] == []
+
+
+def test_baseline_must_be_safe_in_original_not_only_requested_mode(monkeypatch):
+    client, calls = _command_client(
+        monkeypatch, _reported(), _reported(opMode=5, sp=330)
+    )
+    with pytest.raises(FairlandCloudProtocolError, match="safe rollback baseline"):
+        client.set_status({"heatings": {"heat0": {"opMode": 4, "sp": 380}}})
+    assert calls["published"] == []
+
+
+def test_combined_command_restores_valid_temperature_in_original_mode(monkeypatch):
+    original = _reported(opMode=4, sp=380)
+    client, calls = _command_client(monkeypatch, original, original)
+    requested = {"opMode": 5, "sp": 250}
+    restoration = {"opMode": 4, "sp": 380}
+
+    def converge(changes):
+        if changes == requested:
+            message = "synthetic failure after a combined command"
+            raise FairlandCloudProtocolError(message)
+        return original
+
+    monkeypatch.setattr(client, "_wait_for_convergence", converge)
+    with pytest.raises(FairlandCloudProtocolError):
+        client.set_status({"heatings": {"heat0": requested}})
+    assert calls["published"] == [requested, restoration]

@@ -80,6 +80,7 @@ ERR_UPDATE_PUBLISH = "shadow UPDATE publish failed"
 ERR_UPDATE_ACCEPT = "shadow UPDATE was not accepted"
 ERR_UPDATE_CONVERGENCE = "shadow UPDATE accepted but reported state did not converge"
 ERR_MISSING_BASELINE = "reported state is missing a writable baseline field"
+ERR_UNSAFE_BASELINE = "reported state cannot provide a safe rollback baseline"
 ERR_ROLLBACK_FAILED = "shadow UPDATE failed and baseline restoration also failed"
 ERR_METRICS_RESPONSE = "metrics API returned an invalid response"
 ERR_SCHEDULE_RESPONSE = "heat0Schedule returned an invalid response"
@@ -773,6 +774,14 @@ class FairlandCloudClient:
                 baseline = {key: current_heat[key] for key in changes}
             except KeyError as exc:
                 raise FairlandCloudProtocolError(ERR_MISSING_BASELINE) from exc
+            try:
+                extract_mutable_changes({"heatings": {"heat0": baseline}}, None)
+                if "sp" in baseline:
+                    # Restoration returns to the original mode, not the mode
+                    # requested by a combined operation-mode/setpoint command.
+                    temperature_policy(current_heat).validate_raw(baseline["sp"])
+            except (FairlandCloudProtocolError, FairlandTemperatureError) as exc:
+                raise FairlandCloudProtocolError(ERR_UNSAFE_BASELINE) from exc
 
             self._ensure_connection()
             try:

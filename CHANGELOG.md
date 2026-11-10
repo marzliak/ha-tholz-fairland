@@ -11,6 +11,7 @@ User-visible changes to Tholz Fairland for Home Assistant.
 - Restrict limits further when valid device bounds require it. Respect `stepSp` before `step`, keeping the existing 1 °C default only when both are absent; reject malformed capabilities and off-step requests instead of silently rounding.
 - Revalidate temperature against a fresh state and the requested mode before publishing. Mode-only commands do not add or normalize a setpoint; confirmation and rollback safeguards remain in place.
 - Send only the requested field from temperature, operation-mode and fan controls, so an older entity snapshot cannot replay unrelated settings.
+- Validate the rollback values before the first publish, including the original mode's temperature limits and step. Invalid vendor data cannot be replayed as a restoration command.
 
 ### Read-only schedules and metrics documentation
 

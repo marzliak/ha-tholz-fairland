@@ -114,6 +114,7 @@ A entidade e o transporte usam a mesma política para o Fairland **tipo 7**:
 - O valor precisa ser um múltiplo exato de **0,1 °C** e pertencer à grade do passo, contada a partir do **mínimo efetivo**. Não há arredondamento silencioso nem ajuste automático para a faixa.
 - Antes do envio, o transporte valida o pedido contra uma **leitura recente** do estado. Uma automação ou ação direta não contorna a política; uma mudança de modo ou de limites desde a leitura da interface pode fazer o pedido ser recusado.
 - Um modo reportado desconhecido impede comandos de temperatura. Mudar **somente o modo** não acrescenta `sp` nem corrige a temperatura automaticamente.
+- Antes do primeiro envio, os valores de restauração também são validados. Temperatura de base incompatível com o modo original ou passo, ou base malformada, bloqueia o comando; não é reenviada no rollback.
 
 Automações que antes usavam apenas a faixa geral de 12–40 °C podem passar a receber erro. Confira o modo, a faixa e o passo atuais antes de definir a temperatura.
 

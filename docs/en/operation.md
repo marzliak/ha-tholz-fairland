@@ -114,6 +114,7 @@ The entity and transport use the same policy for Fairland **type 7**:
 - A value must be an exact multiple of **0.1 °C** and lie on the step grid anchored at the **effective minimum**. There is no silent rounding or automatic adjustment into range.
 - Before sending, the transport validates the request against a **fresh state read**. An automation or direct action cannot bypass the policy; a mode or limit change since the interface read may cause rejection.
 - An unknown reported mode blocks temperature commands. Changing **only the mode** does not add `sp` or automatically correct the temperature.
+- Restoration values are also validated before the first send. A baseline temperature incompatible with the original mode or step, or a malformed baseline, blocks the command rather than being replayed during rollback.
 
 Automations that previously relied only on the general 12–40 °C range may now receive an error. Check the current mode, range and step before setting a temperature.
 
