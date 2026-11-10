@@ -37,6 +37,7 @@ User-visible changes to Tholz Fairland for Home Assistant.
 - Existing dashboard screenshot, clearly identified as an example capture rather than current telemetry.
 - Native dashboard and optional automation examples, with entity-ID adaptation and safety instructions.
 - Local distribution packaging and automated checks for the prepared source and integration archives.
+- Explicit attribution to Felippe Rodrigo Puhle and the original tholz-hass-integration project in both language READMEs, with the original MIT notice retained.
 
 ### Security and limitations
 

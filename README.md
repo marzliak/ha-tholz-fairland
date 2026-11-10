@@ -8,6 +8,8 @@
 
 An unofficial custom integration for cloud-connected **Tholz Fairland / TurboSilence pool heat pumps**. Change the operating mode, adjust the target water temperature, choose the fan mode, and understand what the equipment is doing—from one device page or your own dashboard.
 
+> Derived from [tholz-hass-integration](https://github.com/felippepuhle/tholz-hass-integration) by **Felippe Rodrigo Puhle**. See [Origin and acknowledgements](#origin-and-acknowledgements).
+
 [Leia em português](README.pt-BR.md) · [User guide](docs/en/README.md) · [Installation](docs/en/installation.md) · [Configuration](docs/en/configuration.md) · [Troubleshooting](docs/en/troubleshooting.md)
 
 > Not affiliated with or endorsed by Tholz, Fairland, or Home Assistant. An internet connection and the manufacturer's cloud service are required. This project does not provide a local-control fallback.
@@ -181,6 +183,14 @@ Do **not** enable broad `DEBUG` logging for `botocore`, `boto3`, `urllib3`, or t
 | [Automations](docs/en/automations.md) | [Version 0.3.0 notes](docs/releases/0.3.0.md) |
 
 Before reporting a problem, verify the device is visible and online in the vendor app, reload the integration, and consult **Settings → System → Logs**. Include the integration version, Home Assistant version, affected entity, expected behavior, and observed behavior. **Do not share passwords, tokens, account or device identifiers, complete configuration entries, or backups.**
+
+## Origin and acknowledgements
+
+This project is derived from [tholz-hass-integration](https://github.com/felippepuhle/tholz-hass-integration), created by **Felippe Rodrigo Puhle** and released under the MIT License. Parts of the Home Assistant integration structure, utilities, and entities have been reused and adapted.
+
+This repository is maintained separately for cloud communication with Fairland/TurboSilence equipment, including account authentication, device discovery, and session recovery. Separate maintenance does not imply involvement or endorsement by the original author.
+
+The original copyright notice and license text are preserved in [LICENSE](LICENSE).
 
 ## Contributing and licensing
 

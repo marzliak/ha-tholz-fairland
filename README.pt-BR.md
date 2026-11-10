@@ -12,6 +12,8 @@ Integração **não oficial** do Home Assistant para bombas de calor **Tholz Fai
 
 Ela apresenta o equipamento como um aquecedor (water heater) do Home Assistant e adiciona telemetria de operação, seletor de modo do ventilador, métricas de 24 horas e uma visão somente leitura das agendas.
 
+> Derivado da integração [tholz-hass-integration](https://github.com/felippepuhle/tholz-hass-integration), de **Felippe Rodrigo Puhle**. Consulte [Origem e créditos](#origem-e-créditos).
+
 > Este projeto não é afiliado nem endossado pela Tholz ou pela Fairland. Ele depende da nuvem do fabricante e pode deixar de funcionar se esse serviço ou suas interfaces mudarem.
 
 Versão desta documentação: **0.3.0 (candidata privada)**. Não há release publicada.
@@ -147,6 +149,14 @@ Antes de relatar um problema:
 5. Remova credenciais e identificadores de qualquer trecho de registro.
 
 Use o rastreador de issues para erros reproduzíveis. Não publique senhas, tokens, identificadores ou backups. Vulnerabilidades seguem [SECURITY.md](SECURITY.md).
+
+## Origem e créditos
+
+Este projeto é derivado de [tholz-hass-integration](https://github.com/felippepuhle/tholz-hass-integration), criado por **Felippe Rodrigo Puhle** e disponibilizado sob a licença MIT. Partes da estrutura de integração com o Home Assistant, dos utilitários e das entidades foram reutilizadas e adaptadas.
+
+Este repositório mantém um desenvolvimento separado, voltado à comunicação cloud dos equipamentos Fairland/TurboSilence, com autenticação pela conta, descoberta de equipamentos e recuperação de sessão. Essa manutenção separada não implica participação ou endosso do autor original.
+
+O aviso de copyright e o texto da licença original estão preservados em [LICENSE](LICENSE).
 
 ## Licença
 
