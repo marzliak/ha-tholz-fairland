@@ -58,7 +58,8 @@ The integration limits automatic password logins per config entry: at most 3 per
 
 - Wait a few seconds. Success requires the device to report the new value with no pending change, which can take a moment.
 - If the value went back, the device did not converge on the requested value and the integration restored the previous state. Try again once the device is confirmed online.
-- Use only allowed values: temperature 12 to 40 °C, modes Off / Automatic / Heat / Cool, and fan Silent / Intelligent.
+- Use only modes Off / Automatic / Heat / Cool and fan Silent / Intelligent. For type-7 temperatures: Automatic **12–40 °C**, Heat **18–40 °C**, Cool **12–30 °C**, Off **12–40 °C** without turning on when only the temperature is set. Reported limits may narrow these ranges.
+- Out-of-range values, values not exactly representable in tenths of a degree, and values off the step grid are rejected without rounding. Malformed limits or steps and an unknown mode also block temperature commands. Validation uses fresh state: an external mode change may invalidate a value the interface previously showed as allowed. See [limits and step](operation.md#temperature-limits-and-step); do not retry the command in a loop.
 
 ### Failed to restore the previous state
 
@@ -76,7 +77,9 @@ The integration treats this case as a failed return to the previous state (inter
 
 ### 24-hour metrics or schedules are empty
 
-- Metrics come from the manufacturer's service and are queried at most every 5 minutes. After a failure, the sensors may have no value until the next successful query.
+- Activity rows come from the manufacturer's API; the integration calculates the rolling 24-hour summary and holds it in memory for **5 minutes**, separately from state polling.
+- A non-authentication metrics failure leaves the initial summary as `{}` (sensors with no value, not zero). After a successful query, it preserves the previous summary, which may become stale. After the cache wait, the next read attempts another query.
+- HTTP **401/403** are not hidden by the metrics fallback: they follow the authentication/authorization error path. Check the entry's notices rather than treating an old value as a new valid reading.
 - Schedules are read together with the state. If the schedule read fails, the schedule entities may not be created at setup. Reload the entry.
 - None of these metrics measures energy consumption.
 

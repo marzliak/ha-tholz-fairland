@@ -25,8 +25,8 @@ Os nomes abaixo usam o prefixo que você escolheu no cadastro (aqui, `<nome>`). 
 | `<nome> Online` | Sensor binário (conectividade) | Leitura | Conexão reportada pela nuvem |
 | `<nome> Problem` | Sensor binário (problema) | Leitura | Ligado quando o código de erro é diferente de zero |
 | `<nome> Error code` | Sensor de diagnóstico | Leitura | Código de erro bruto reportado pelo equipamento |
-| `<nome> Tempo Aquecendo 24h` | Sensor de duração (segundos) | Leitura | Tempo ativo nas últimas 24 horas, segundo a nuvem |
-| `<nome> Ciclo de Aquecimento 24h` | Sensor (%) | Leitura | Percentual de tempo ativo nas últimas 24 horas |
+| `<nome> Tempo Aquecendo 24h` | Sensor de duração (segundos) | Leitura | Tempo ativo calculado pela integração a partir dos registros do fabricante, na janela móvel de 24 horas |
+| `<nome> Ciclo de Aquecimento 24h` | Sensor (%) | Leitura | Percentual de atividade calculado pela integração para a mesma janela |
 | `<nome> Agenda 1` a `Agenda 5` | Sensor | Leitura | Estado da agenda: `Ativa` ou `Desativada`, com horário |
 | `<nome> Agendas Ativas` | Sensor (contagem) | Leitura | Quantas agendas estão ativas |
 | `<nome> Agenda Versão` | Sensor de diagnóstico | Leitura | Versão da agenda reportada pelo equipamento |
@@ -67,18 +67,23 @@ Importante:
 
 ## Métricas das últimas 24 horas
 
-- **Tempo Aquecendo 24h** (segundos) e **Ciclo de Aquecimento 24h** (%) vêm do serviço de métricas do fabricante.
-- O percentual é o valor calculado pelo serviço do fabricante; a integração não calcula essa métrica. As métricas são consultadas no máximo a cada **5 minutos**.
-- São **medidas reportadas pelo fabricante**, não medição de energia. A integração **não informa consumo de energia, kWh nem custo**.
-- Se o serviço de métricas falhar, os sensores podem mostrar valor vazio até a próxima consulta bem-sucedida.
+- **Origem dos dados:** a API do fabricante fornece as linhas da tabela `activeTime`. A integração seleciona os registros de `heat0` a partir do corte da janela móvel de **24 horas** e soma suas durações de atividade não negativas.
+- **Cálculo local:** a função `summarize_metrics_document`, em `custom_components/tholz_fairland/cloud/client.py`, converte essa soma de milissegundos para segundos e calcula o percentual em relação à janela de 24 horas. **Tempo Aquecendo 24h** tem arredondamento a uma casa decimal; **Ciclo de Aquecimento 24h**, a duas. O percentual não é um valor pronto fornecido pelo serviço.
+- **Cache:** o resumo fica em memória por **5 minutos**, independentemente do intervalo de atualização do estado. A próxima leitura após esse prazo tenta consultar as métricas novamente; as entidades não recalculam a janela a cada segundo.
+- **Falhas que não sejam de autenticação:** se a primeira consulta falhar, o resumo é `{}` e os sensores ficam sem valor, não em zero. Se já houver um resumo, ele é preservado e pode ficar desatualizado. O resultado de fallback também respeita a espera de 5 minutos antes de outra consulta.
+- **Autenticação/autorização:** respostas HTTP **401/403** são propagadas como erro de autenticação, não ocultadas como uma falha opcional de métricas.
+- O resultado depende dos registros recebidos; não garante histórico completo nem equivalência a todos os gráficos do aplicativo. **Não mede energia, potência, kWh, custo ou eficiência.**
 
 ## Agendas: somente leitura
 
 - As agendas (`Agenda 1` a `Agenda 5`) são **somente leitura**. Você as visualiza no Home Assistant, mas **não as edita** por ele.
 - Para alterar uma agenda, use o aplicativo do fabricante.
 - Estado: `Ativa · HH:MM-HH:MM` ou `Desativada · HH:MM-HH:MM`.
-- Atributos de cada agenda: `slot`, `active`, `turn_on`, `turn_off`, `repeat_mask`, `repeat_description` e `read_only: true`.
-- Máscara de repetição: `127` significa **todos os dias**; `0` significa **nenhum dia**. Outros valores aparecem como "Máscara semanal N (dias ainda não mapeados)" no atributo `repeat_description`; confira esses dias no aplicativo do fabricante.
+- Atributos de cada agenda: `slot`, `active`, `turn_on`, `turn_off`, `repeat_mask`, `repeat_days`, `repeat_description` e `read_only: true`.
+- `repeat_mask` preserva o valor numérico de `rept`. `repeat_days` contém a lista dos dias selecionados, com nomes em português, ordenados de **segunda a domingo**. `repeat_description` apresenta esses dias em texto legível.
+- Na máscara, os valores são: segunda **32**, terça **16**, quarta **8**, quinta **4**, sexta **2**, sábado **1** e domingo **64**. As combinações somam os valores dos dias selecionados.
+- `0` resulta em `repeat_days: []` e `repeat_description: "Nenhum dia"`; `127` lista os sete dias e tem descrição **"Todos os dias"**. Zero não é apresentado como execução única.
+- Os dias exibidos descrevem a repetição informada, não uma previsão da próxima execução.
 - A integração não cria, altera nem liga/desliga agendas.
 
 ## Comandos
@@ -88,16 +93,35 @@ Você pode alterar três itens: **modo de operação**, **temperatura-alvo** e *
 | Comando | Valores aceitos | Observação |
 |---|---|---|
 | Modo de operação | Desligado (`off`), Automático (`automatic`), Aquecer (`heat`), Resfriar (`cold`) | Estes são os valores internos da integração. O README do projeto chama o último modo de "Cool"; veja [FAQ](FAQ.md). |
-| Temperatura-alvo | 12 a 40 °C | Valores fora da faixa são recusados antes do envio. |
+| Temperatura-alvo | Automático: 12–40 °C; Aquecer: 18–40 °C; Resfriar: 12–30 °C | Limites reportados podem restringir a faixa. Veja as regras abaixo, inclusive para Desligado. |
 | Modo do ventilador | Silent, Intelligent | Dois valores somente. |
 
 Para alterar, use o cartão do aquecedor no painel, a ação do seletor ou a ferramenta padrão do Home Assistant. **Cada comando altera o equipamento físico.** Confirme a entidade antes de usar.
+
+### Limites e passo da temperatura
+
+A entidade e o transporte usam a mesma política para o Fairland **tipo 7**:
+
+| Modo | Faixa-base da temperatura-alvo |
+|---|---|
+| Automático (`automatic`) | 12–40 °C |
+| Aquecer (`heat`) | 18–40 °C |
+| Resfriar (`cold`, Cool) | 12–30 °C |
+| Desligado (`off`) | 12–40 °C, preservando a faixa legada; definir apenas a temperatura não liga o equipamento |
+
+- Limites válidos de `minSp` e `maxSp` só podem **restringir** a faixa-base, nunca ampliá-la. Se a faixa resultante for inconsistente, o pedido de temperatura é recusado.
+- O passo vem de `stepSp`, com prioridade sobre `step`; ambos usam décimos de grau. **Somente se os dois estiverem ausentes**, mantém-se o passo legado de **1 °C**. Um campo de limite ou passo presente mas malformado não é tratado como ausente: o pedido de temperatura é recusado.
+- O valor precisa ser um múltiplo exato de **0,1 °C** e pertencer à grade do passo, contada a partir do **mínimo efetivo**. Não há arredondamento silencioso nem ajuste automático para a faixa.
+- Antes do envio, o transporte valida o pedido contra uma **leitura recente** do estado. Uma automação ou ação direta não contorna a política; uma mudança de modo ou de limites desde a leitura da interface pode fazer o pedido ser recusado.
+- Um modo reportado desconhecido impede comandos de temperatura. Mudar **somente o modo** não acrescenta `sp` nem corrige a temperatura automaticamente.
+
+Automações que antes usavam apenas a faixa geral de 12–40 °C podem passar a receber erro. Confira o modo, a faixa e o passo atuais antes de definir a temperatura.
 
 ### Ciclo de um comando
 
 ![Diagrama ilustrativo do ciclo de um comando: leitura de base, envio, convergência e retorno à base em caso de falha](images/command-lifecycle.png)
 
-1. A integração **lê o estado atual** do equipamento e guarda os valores que serão alterados.
+1. A integração **lê o estado atual** do equipamento, valida o pedido e guarda os valores que serão alterados. Uma temperatura inválida é recusada antes do envio.
 2. Envia **somente** o campo alterado.
 3. Aguarda até **45 segundos** pelo estado reportado. Sucesso exige que o estado reportado coincida com o valor pedido **e** que não haja mudança pendente.
 4. Se o equipamento não convergir, a integração tenta **restaurar o valor anterior**.
@@ -114,7 +138,7 @@ Consequências práticas:
 - **Somente nuvem.** Sem nuvem, não há leitura nem comando. Não há modo local.
 - **Sem controle de agendas.** As agendas são somente leitura.
 - **Somente os três comandos listados.** Nenhum outro modo, horário ou função é suportado.
-- **Sem métricas de energia.** Os tempos e percentuais vêm do fabricante e não representam consumo.
+- **Sem métricas de energia.** Os tempos e percentuais são calculados localmente a partir dos registros do fabricante e não representam consumo.
 - **Dependência do fabricante.** Mudanças no serviço, na conta ou nas interfaces podem deixar entidades indisponíveis.
 
 ## Próximos passos

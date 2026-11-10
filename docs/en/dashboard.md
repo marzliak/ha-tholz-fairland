@@ -15,7 +15,7 @@ Reading the capture:
 - **"Saída" card:** outlet water temperature at the device.
 - **"Ambiente" card:** reported air temperature.
 - **"ΔT Saída – Entrada" card:** the difference between outlet and inlet, calculated **on the dashboard**. **It is not an entity the integration creates.** You could create it with a template sensor if you want it; the included example does not use it.
-- **"Ligado — 24 h móveis" and "Ciclo — 24 h móveis" cards:** the manufacturer's 24-hour metrics. They are not energy measurements.
+- **"Ligado — 24 h móveis" and "Ciclo — 24 h móveis" cards:** active time and percentage calculated by the integration from manufacturer activity records over a rolling 24-hour window. The summary has a 5-minute cache and may retain the previous value after a non-authentication failure; it is not an energy measurement ([details](operation.md#24-hour-metrics)).
 
 Card titles in the capture were chosen by the dashboard's author. The included example uses different titles.
 
@@ -50,9 +50,9 @@ To list IDs at once, use **Developer tools → Template** with `{{ states.water_
 
 ## Usage rules for the dashboard
 
-- **Control card:** commands change the **physical device**. Confirm the entity before using it.
+- **Control card:** commands change the **physical device**. Confirm the entity before using it. The temperature range and step depend on the mode and reported limits; direct actions are also validated, without silent rounding ([rules](operation.md#temperature-limits-and-step)).
 - **"Heat pump running" indicator:** shows the reported running state. **It is not a power switch.**
-- **Schedules:** read-only. The example displays them but does not change them.
+- **Schedules:** read-only. The example displays them but does not change them. The `repeat_days` and `repeat_description` attributes give the days in Portuguese, Monday to Sunday, while `repeat_mask` preserves the numeric mask ([details](operation.md#schedules-read-only)).
 - **Diagnostics:** separated from daily controls. Not needed to operate the heater.
 - The example **never overwrites** an existing dashboard. It is a starting point.
 

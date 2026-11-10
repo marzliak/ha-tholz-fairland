@@ -129,12 +129,14 @@ The integration stores the e-mail or username, the password, the session tokens 
 
 | Item | Value in this release |
 |---|---|
-| Target temperature | **12 to 40 °C**, in steps defined by the device |
+| Target temperature (type 7) | Automatic: **12–40 °C**; Heat: **18–40 °C**; Cool: **12–30 °C**; Off: **12–40 °C**, without turning on when only the temperature is set |
 | Operation modes | Off (`off`), Automatic (`automatic`), Heat (`heat`), Cool (`cold`) |
 | Fan modes | Silent, Intelligent |
 | Polling interval | 10 to 300 s (default 30 s) |
 
-The 12–40 °C range is enforced by the integration before anything is sent. The temperature step is read from the device. If the device does not report a step, the integration uses **1.0 °C**. The minimum and maximum also come from the device; if absent, the integration uses 12 °C and 40 °C.
+Valid limits reported by the device can only narrow the mode's range, never widen it. The step uses `stepSp` before `step`; if both are absent, the legacy **1 °C** step applies. Present but malformed fields cause the temperature request to be rejected. The value must respect tenths of a degree and the step grid anchored at the effective minimum, without silent rounding.
+
+The interface and transport follow the same policy, with validation against fresh state before sending. An unknown mode blocks temperature requests; changing only the mode does not send a new target temperature. See [Operation → Temperature limits and step](operation.md#temperature-limits-and-step), including when adapting older automations.
 
 ## Add another device
 

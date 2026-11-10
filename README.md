@@ -19,7 +19,7 @@ An unofficial custom integration for cloud-connected **Tholz Fairland / TurboSil
 | Control | Observe | Connect |
 | --- | --- | --- |
 | Off, Automatic, Heat, Cool | Ambient, inlet, and outlet water temperatures | Sign in with the account used in the vendor app |
-| Target temperature: 12–40 °C | Running, online, and problem indicators | Discover compatible heat pumps automatically |
+| Mode-dependent target temperature | Running, online, and problem indicators | Discover compatible heat pumps automatically |
 | Silent or Intelligent fan mode | Device error code, 24-hour activity, and schedule slots | Recover the cloud session without recreating your device |
 
 **No manual tokens or device identifiers are required for new account-based setup.** If the account requests verification or a new password, the configuration assistant guides you through it. When multiple supported heat pumps are associated with the account, select the one to add.
@@ -29,19 +29,21 @@ An unofficial custom integration for cloud-connected **Tholz Fairland / TurboSil
 ### Control the heat pump
 
 - Choose **Off**, **Automatic**, **Heat**, or **Cool** through a standard `water_heater` entity.
-- Set the target temperature within **12–40 °C**. The device's reported temperature step is respected by the water-heater entity.
+- Set the target temperature within **12–40 °C in Automatic**, **18–40 °C in Heat**, or **12–30 °C in Cool** for the supported type-7 heat pump.
 - Choose **Silent** or **Intelligent** through a separate `select` entity.
 - Use Home Assistant's native cards and service actions to build your own routines.
 
 These controls do not operate the circulation pump, filtration system, lights, or auxiliary outputs. Heat-pump operation still depends on the equipment's own safety conditions and water flow.
+
+In **Off**, temperature-only requests retain the legacy **12–40 °C** range and do not turn the device on. Valid reported limits can only narrow these ranges. The interface and transport enforce the same temperature policy and effective step, without silent rounding; changing only the mode does not send a new target temperature. See [temperature limits and step](docs/en/operation.md#temperature-limits-and-step) before adapting automations.
 
 ### Monitor the equipment
 
 - See ambient, water-inlet, and water-outlet temperatures.
 - Distinguish the requested operating mode from the **running** indicator. A selected heating mode does not mean the compressor is currently operating.
 - Check online status, the problem indicator, and the reported device error code.
-- Read heating active time and duty cycle for the previous **rolling 24 hours**.
-- View **five schedule slots** and associated schedule information. Change the equipment's schedule in the vendor app; this integration only reads it.
+- Read heating active time and duty cycle **calculated locally from manufacturer activity records** for a **rolling 24-hour** window. The summary has a 5-minute cache; see [metrics, caching and failures](docs/en/operation.md#24-hour-metrics).
+- View **five read-only schedule slots**, including readable repeat days in Portuguese, ordered Monday to Sunday. `repeat_days` lists the selected names; `repeat_mask` preserves the raw mask. Change schedules only in the vendor app; see [schedule details](docs/en/operation.md#schedules-read-only).
 
 Activity metrics are not an energy meter. They do not measure electricity consumption, cost, heating output, or efficiency. Availability depends on what the equipment and cloud report.
 

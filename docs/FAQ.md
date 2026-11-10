@@ -30,11 +30,17 @@ Não. A temperatura atual é a leitura de **entrada** de água no equipamento. N
 **O modo "Resfriar" aparece como "cold"?**
 Sim. O valor interno é `cold`. O README do projeto usa o nome "Cool" para o mesmo modo. A interface do Home Assistant pode mostrar um rótulo diferente. Os valores aceitos estão em [Operação](operation.md#comandos).
 
+**Por que uma temperatura antes aceita agora dá erro?**
+No tipo 7, a faixa depende do modo: Automático **12–40 °C**, Aquecer **18–40 °C**, Resfriar **12–30 °C**. Desligado mantém **12–40 °C**, sem ligar ao definir apenas a temperatura. Limites reportados só podem restringir a faixa; o passo também é validado, sem arredondamento silencioso. Uma leitura recente confirma a política antes do envio. Modo desconhecido ou campos de limite/passo malformados recusam a temperatura. Veja [limites e passo](operation.md#limites-e-passo-da-temperatura).
+
 **Posso alterar as agendas pela integração?**
 Não. As agendas são somente leitura. Altere-as no aplicativo do fabricante.
 
+**Como leio os dias de repetição das agendas?**
+`repeat_days` lista os dias em português, de segunda a domingo, e `repeat_description` os apresenta em texto. `repeat_mask` conserva a máscara original: `0` é **Nenhum dia** e `127` é **Todos os dias**. Isso não altera os horários nem prevê a próxima execução. Veja [agendas](operation.md#agendas-somente-leitura).
+
 **A integração mostra consumo de energia ou custo?**
-Não. O painel mostra o tempo ativo e o percentual de 24 horas reportados pelo fabricante. Esses valores não são medição de energia.
+Não. O painel mostra tempo ativo e percentual calculados pela integração a partir dos registros de atividade do fabricante, na janela móvel de 24 horas. Não são medição de energia, custo ou eficiência. Veja [métricas, cache e falhas](operation.md#métricas-das-últimas-24-horas).
 
 **O sensor "Heat pump running" é um interruptor?**
 Não. É um indicador do estado reportado de funcionamento. Não liga nem desliga o equipamento.

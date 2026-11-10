@@ -9,8 +9,8 @@ Os exemplos deste guia estão em [`examples/automations.yaml`](../examples/autom
 - **Opt-in explícito:** você copia o bloco, ajusta os IDs e cria a automação. Até lá, nada acontece.
 - **Sem controle de bomba de circulação:** a integração não expõe bomba de circulação e nenhum exemplo a comanda.
 - **Sem agendas:** as agendas do equipamento são somente leitura. Os exemplos não criam nem alteram horários.
-- **Sem promessas de energia:** os valores de 24 horas são reportados pelo fabricante e não medem consumo.
-- **Limites respeitados:** qualquer temperatura enviada deve estar entre **12 e 40 °C**.
+- **Sem promessas de energia:** os valores de 24 horas são calculados pela integração a partir dos registros de atividade do fabricante e não medem consumo.
+- **Limites respeitados:** no tipo 7, Automático permite **12–40 °C**, Aquecer **18–40 °C**, Resfriar **12–30 °C** e Desligado mantém **12–40 °C** sem ligar ao definir apenas a temperatura. Limites reportados podem restringir a faixa; o valor também precisa respeitar o passo, sem arredondamento silencioso ([regras completas](operation.md#limites-e-passo-da-temperatura)).
 - **Comandos reais:** toda ação de escrita afeta o equipamento físico.
 
 ## Como adicionar uma automação
@@ -43,11 +43,12 @@ Notifica quando o sensor **Online** permanece desligado por 15 minutos.
 
 ### 3. Script manual: definir temperatura-alvo
 
-Script que **só roda quando você o executa**. Ele recusa valores fora de 12 a 40 °C antes de enviar qualquer comando.
+Script que **só roda quando você o executa**. O exemplo tem uma verificação geral de 12 a 40 °C, mas isso **não garante que o valor seja aceito**: a integração valida o modo, os limites e o passo contra um estado recente antes de enviar. Uma automação antes aceita pode passar a receber erro; ela não deve mudar o modo para contornar essa validação.
 
-- Campo: `temperature` (número de 12 a 40).
+- Campo: `temperature` (seletor do exemplo de 12 a 40, passo de 1 °C; não substitui a política efetiva da integração).
 - Ação: `water_heater.set_temperature` no aquecedor.
 - Não há gatilho automático. Confirme o valor antes de executar.
+- Definir apenas a temperatura não liga um equipamento em Desligado. Uma mudança somente de modo não acrescenta uma nova temperatura-alvo.
 
 ## Notificações: escolha o canal
 

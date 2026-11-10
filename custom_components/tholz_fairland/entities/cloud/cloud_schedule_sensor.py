@@ -14,6 +14,27 @@ from ...utils.device import get_device_info
 
 _SCHEDULE_EVENT_COUNT = 5
 _ALL_DAYS_REPEAT_MASK = 127
+_REPEAT_DAY_BITS = (
+    (32, "Segunda-feira"),
+    (16, "Terça-feira"),
+    (8, "Quarta-feira"),
+    (4, "Quinta-feira"),
+    (2, "Sexta-feira"),
+    (1, "Sábado"),
+    (64, "Domingo"),
+)
+
+
+def decode_repeat_days(mask: int) -> list[str]:
+    """Decode a heat0Schedule repeat mask in Monday-to-Sunday order."""
+    if (
+        not isinstance(mask, int)
+        or isinstance(mask, bool)
+        or not 0 <= mask <= _ALL_DAYS_REPEAT_MASK
+    ):
+        message = "Repeat mask must be an integer from 0 to 127"
+        raise ValueError(message)
+    return [day for bit, day in _REPEAT_DAY_BITS if mask & bit]
 
 
 def _format_time(value):
@@ -27,11 +48,15 @@ def _format_time(value):
 
 
 def _repeat_description(mask):
+    try:
+        days = decode_repeat_days(mask)
+    except ValueError:
+        return "Máscara semanal inválida"
     if mask == _ALL_DAYS_REPEAT_MASK:
         return "Todos os dias"
-    if mask == 0:
+    if not days:
         return "Nenhum dia"
-    return f"Máscara semanal {mask} (dias ainda não mapeados)"
+    return ", ".join(days)
 
 
 def get_cloud_schedule_sensors(hass, entry, manager, data):
@@ -111,12 +136,17 @@ class CloudScheduleSlotSensor(_CloudScheduleSensor):
     def extra_state_attributes(self):
         event = self._event
         repeat = event.get("rept")
+        try:
+            repeat_days = decode_repeat_days(repeat)
+        except ValueError:
+            repeat_days = None
         return {
             "slot": self._index,
             "active": event.get("active"),
             "turn_on": _format_time(event.get("turnOn")),
             "turn_off": _format_time(event.get("turnOff")),
             "repeat_mask": repeat,
+            "repeat_days": repeat_days,
             "repeat_description": _repeat_description(repeat),
             "read_only": True,
         }

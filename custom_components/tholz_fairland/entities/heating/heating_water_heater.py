@@ -6,7 +6,12 @@ from homeassistant.components.water_heater import (
     WaterHeaterEntityFeature,
 )
 from homeassistant.const import UnitOfTemperature
+from homeassistant.exceptions import HomeAssistantError
 
+from ...cloud.temperature_policy import (
+    FairlandTemperatureError,
+    temperature_policy,
+)
 from ...utils.const import CONF_NAME_KEY, DOMAIN, ENTITIES_SCAN_INTERVAL
 from ...utils.device import get_device_info
 from ...utils.dict import get_in, set_in
@@ -58,7 +63,11 @@ class HeatingWaterHeater(WaterHeaterEntity):
         temperature = kwargs.get("temperature")
         if temperature is None:
             return
-        next_state = {**self._state, "sp": round(temperature * 10)}
+        try:
+            setpoint = temperature_policy(self._state).to_raw(temperature)
+        except FairlandTemperatureError as exc:
+            raise HomeAssistantError(str(exc)) from exc
+        next_state = {"sp": setpoint}
         result = await self._manager.set_status(
             set_in({}, self._heating_key, next_state)
         )
@@ -68,7 +77,7 @@ class HeatingWaterHeater(WaterHeaterEntity):
     async def async_set_operation_mode(self, operation_mode):
         if operation_mode not in _HA_TO_MODE:
             return
-        next_state = {**self._state, "opMode": _HA_TO_MODE[operation_mode]}
+        next_state = {"opMode": _HA_TO_MODE[operation_mode]}
         result = await self._manager.set_status(
             set_in({}, self._heating_key, next_state)
         )
@@ -91,18 +100,24 @@ class HeatingWaterHeater(WaterHeaterEntity):
 
     @property
     def target_temperature_step(self):
-        step = self._state.get("stepSp", self._state.get("step"))
-        return step / 10 if step is not None else 1.0
+        try:
+            return temperature_policy(self._state).step / 10
+        except FairlandTemperatureError:
+            return None
 
     @property
     def min_temp(self):
-        value = self._state.get("minSp")
-        return value / 10 if value is not None else 12.0
+        try:
+            return temperature_policy(self._state).minimum / 10
+        except FairlandTemperatureError:
+            return None
 
     @property
     def max_temp(self):
-        value = self._state.get("maxSp")
-        return value / 10 if value is not None else 40.0
+        try:
+            return temperature_policy(self._state).maximum / 10
+        except FairlandTemperatureError:
+            return None
 
     @property
     def current_operation(self):

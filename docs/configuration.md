@@ -129,12 +129,14 @@ A integração guarda o e-mail ou usuário, a senha, os tokens de sessão e os i
 
 | Item | Valor nesta versão |
 |---|---|
-| Temperatura-alvo | **12 a 40 °C**, em passos definidos pelo equipamento |
+| Temperatura-alvo (tipo 7) | Automático: **12–40 °C**; Aquecer: **18–40 °C**; Resfriar: **12–30 °C**; Desligado: **12–40 °C**, sem ligar ao definir apenas a temperatura |
 | Modos de operação | Desligado (`off`), Automático (`automatic`), Aquecer (`heat`), Resfriar (`cold`) |
 | Modos do ventilador | Silent (silencioso), Intelligent (inteligente) |
 | Intervalo de atualização | 10 a 300 s (padrão 30 s) |
 
-A faixa de 12 a 40 °C é imposta pela integração antes de qualquer envio. O passo (incremento) da temperatura é lido do equipamento. Se o equipamento não informar o passo, a integração usa **1,0 °C**. Os limites mínimo e máximo também vêm do equipamento; se ausentes, a integração usa 12 °C e 40 °C.
+Os limites válidos reportados pelo equipamento só podem restringir a faixa do modo, nunca ampliá-la. O passo usa `stepSp` antes de `step`; se ambos estiverem ausentes, mantém-se **1 °C**. Campos presentes mas malformados recusam o pedido de temperatura. O valor precisa respeitar os décimos de grau e a grade do passo a partir do mínimo efetivo, sem arredondamento silencioso.
+
+A interface e o transporte seguem a mesma política, com validação contra um estado recente antes do envio. Modo desconhecido recusa temperatura; mudar somente o modo não envia uma nova temperatura-alvo. Consulte [Operação → Limites e passo da temperatura](operation.md#limites-e-passo-da-temperatura), inclusive ao adaptar automações antigas.
 
 ## Adicionar outro equipamento
 

@@ -20,13 +20,17 @@ Versão desta documentação: **0.3.0 (candidata privada)**. Não há release pu
 
 ## Recursos
 
-- **Controle do aquecedor:** Desligado, Automático, Aquecer e Resfriar; temperatura-alvo de 12 a 40 °C.
+- **Controle do aquecedor:** Desligado, Automático, Aquecer e Resfriar; temperatura-alvo por modo no tipo 7: **Automático 12–40 °C**, **Aquecer 18–40 °C** e **Resfriar 12–30 °C**.
 - **Ventilador:** Silent ou Intelligent.
-- **Telemetria somente leitura:** temperaturas de ambiente, entrada e saída; em funcionamento; online; problema; código de erro; tempo ativo e ciclo de aquecimento das últimas 24 horas; cinco agendas e diagnósticos.
+- **Telemetria somente leitura:** temperaturas de ambiente, entrada e saída; em funcionamento; online; problema; código de erro; tempo ativo e ciclo de aquecimento calculados localmente a partir dos registros do fabricante na janela móvel de 24 horas; cinco agendas e diagnósticos.
 - **Cadastro pela conta:** e-mail ou usuário e senha, descoberta de equipamentos, verificação quando a conta exigir e reautenticação no Home Assistant.
 - **Comandos seguros:** só três campos são graváveis. Cada comando parte de uma leitura de base e só é considerado concluído quando o estado reportado coincide e não há mudança pendente. Se não convergir, a integração tenta restaurar a base.
 
-As agendas são somente leitura. O indicador **Em funcionamento** é uma leitura do equipamento, não um interruptor. O modo selecionado não garante que o compressor esteja funcionando naquele instante; circulação e proteções continuam sob responsabilidade do equipamento e da instalação.
+Em **Desligado**, definir apenas a temperatura preserva a faixa legada de **12–40 °C** e não liga o equipamento. Limites válidos reportados só podem restringir as faixas. Interface e transporte aplicam a mesma política e o passo efetivo, sem arredondamento silencioso; mudar apenas o modo não envia uma nova temperatura-alvo. Confira o [guia de limites e passo](docs/operation.md#limites-e-passo-da-temperatura) antes de adaptar automações.
+
+As agendas continuam **somente leitura**: mostram os dias de repetição em português, de segunda a domingo, com a lista `repeat_days` e a máscara bruta preservada em `repeat_mask`. Altere-as somente no aplicativo do fabricante. Veja [agendas](docs/operation.md#agendas-somente-leitura) e [métricas, cache e falhas](docs/operation.md#métricas-das-últimas-24-horas); o resumo de atividade tem cache de 5 minutos e não mede energia, custo ou eficiência.
+
+O indicador **Em funcionamento** é uma leitura do equipamento, não um interruptor. O modo selecionado não garante que o compressor esteja funcionando naquele instante; circulação e proteções continuam sob responsabilidade do equipamento e da instalação.
 
 ## Como funciona
 
@@ -126,7 +130,7 @@ O guia completo está em [docs/privacy.md](docs/privacy.md).
 - Somente nuvem. Sem acesso à nuvem não há controle nem leitura.
 - As agendas são somente leitura.
 - Somente modo, temperatura-alvo e ventilador são graváveis.
-- Métricas de 24 horas são reportadas pelo fabricante; não medem energia nem custo.
+- Métricas de 24 horas são calculadas pela integração a partir dos registros de atividade do fabricante; não medem energia, custo ou eficiência.
 - Mudanças do fabricante podem deixar entidades indisponíveis.
 - Um comando com falha pode deixar o equipamento indisponível mesmo após a restauração. Verifique o equipamento fisicamente.
 

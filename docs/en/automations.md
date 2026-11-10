@@ -9,8 +9,8 @@ The examples are in [`examples/automations.yaml`](../../examples/automations.yam
 - **Explicit opt-in:** you copy the block, adjust the IDs and create the automation. Until then, nothing happens.
 - **No circulation pump control:** the integration does not expose a circulation pump and no example commands one.
 - **No schedules:** the device schedules are read-only. The examples neither create nor change timetables.
-- **No energy promises:** 24-hour values are manufacturer-reported and do not measure consumption.
-- **Limits respected:** any temperature sent must be between **12 and 40 °C**.
+- **No energy promises:** 24-hour values are calculated by the integration from manufacturer activity records and do not measure consumption.
+- **Limits respected:** for type 7, Automatic allows **12–40 °C**, Heat **18–40 °C**, Cool **12–30 °C**, and Off retains **12–40 °C** without turning on when only the temperature is set. Reported limits can narrow the range; the value must also respect the step, without silent rounding ([full rules](operation.md#temperature-limits-and-step)).
 - **Real commands:** every write action affects the physical device.
 
 ## How to add an automation
@@ -43,11 +43,12 @@ Notifies when the **Online** sensor stays off for 15 minutes.
 
 ### 3. Manual script: set target temperature
 
-A script that **runs only when you run it**. It refuses values outside 12 to 40 °C before sending any command.
+A script that **runs only when you run it**. The example has a general 12 to 40 °C check, but that **does not guarantee acceptance**: the integration validates the mode, limits and step against fresh state before sending. A previously accepted automation may now receive an error; it should not change the mode to bypass that validation.
 
-- Field: `temperature` (number from 12 to 40).
+- Field: `temperature` (the example selector spans 12 to 40 with a 1 °C step; it does not replace the integration's effective policy).
 - Action: `water_heater.set_temperature` on the heater.
 - No automatic trigger. Confirm the value before running it.
+- Setting only the temperature does not turn on a device in Off mode. A mode-only change does not add a new target temperature.
 
 ## Notifications: choose a channel
 

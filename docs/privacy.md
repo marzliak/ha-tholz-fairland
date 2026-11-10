@@ -42,7 +42,7 @@ A integração envia credenciais e dados do equipamento **somente** aos serviço
 
 - **Autenticação de conta** (Amazon Cognito, região `us-east-1`).
 - **API do fabricante** (AWS API Gateway, região `us-east-1`), para descoberta de equipamentos e o autorizador de conexão.
-- **Métricas de 24 horas** do fabricante (mesma API).
+- **Registros de atividade** do fabricante (mesma API), usados pela integração para calcular localmente o resumo móvel de 24 horas de tempo ativo e percentual. Veja [Operação](operation.md#métricas-das-últimas-24-horas).
 - **Mensageria** do equipamento (AWS IoT Core, região `us-east-1`), para leitura do estado e envio de comandos.
 
 Não há envio de análises, telemetria ou estatísticas aos mantenedores deste projeto.

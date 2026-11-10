@@ -30,11 +30,17 @@ It is the inlet water temperature at the device, labelled by the dashboard's aut
 **Does the "Cool" mode appear as "cold"?**
 Yes. The internal value is `cold`. The project README calls the same mode "Cool". The Home Assistant interface may show a different label. Accepted values are listed in [Operation](operation.md#commands).
 
+**Why does a previously accepted temperature now cause an error?**
+For type 7, the range depends on mode: Automatic **12–40 °C**, Heat **18–40 °C**, Cool **12–30 °C**. Off retains **12–40 °C**, without turning on when only the temperature is set. Reported limits can only narrow the range; the step is also validated, without silent rounding. A fresh read confirms the policy before sending. An unknown mode or malformed limit/step fields cause temperature rejection. See [limits and step](operation.md#temperature-limits-and-step).
+
 **Can I change the schedules through the integration?**
 No. Schedules are read-only. Change them in the manufacturer's app.
 
+**How do I read schedule repeat days?**
+`repeat_days` lists the days in Portuguese, Monday to Sunday, and `repeat_description` presents them as text. `repeat_mask` retains the original mask: `0` is **Nenhum dia** (no days) and `127` is **Todos os dias** (every day). This does not change times or predict the next execution. See [schedules](operation.md#schedules-read-only).
+
 **Does the integration show energy consumption or cost?**
-No. The dashboard shows the 24-hour active time and percentage reported by the manufacturer. These are not energy measurements.
+No. The dashboard shows active time and percentage calculated by the integration from manufacturer activity records over a rolling 24-hour window. These are not energy, cost or efficiency measurements. See [metrics, caching and failures](operation.md#24-hour-metrics).
 
 **Is "Heat pump running" a switch?**
 No. It is an indicator of the reported running state. It does not turn the device on or off.

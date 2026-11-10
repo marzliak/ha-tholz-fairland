@@ -4,6 +4,19 @@ User-visible changes to Tholz Fairland for Home Assistant.
 
 ## 0.3.0 — prepared version, not publicly released
 
+### Temperature validation
+
+- Share one temperature policy between the water-heater entity and command transport: Automatic 12–40 °C, Heat 18–40 °C, and Cool 12–30 °C for the supported Fairland family.
+- Preserve the legacy 12–40 °C range while Off without switching the equipment on; reject temperature requests for unknown modes or unsupported families.
+- Restrict limits further when valid device bounds require it. Respect `stepSp` before `step`, keeping the existing 1 °C default only when both are absent; reject malformed capabilities and off-step requests instead of silently rounding.
+- Revalidate temperature against a fresh state and the requested mode before publishing. Mode-only commands do not add or normalize a setpoint; confirmation and rollback safeguards remain in place.
+- Send only the requested field from temperature, operation-mode and fan controls, so an older entity snapshot cannot replay unrelated settings.
+
+### Read-only schedules and metrics documentation
+
+- Show selected weekdays for all valid seven-day schedule masks while preserving the raw mask, slot identities, times, and read-only behavior. Add the `repeat_days` attribute.
+- Correct Portuguese and English guides: the integration calculates rolling 24-hour active seconds and duty cycle from vendor activity records, with a five-minute cache and retention of the previous summary after non-authentication failures.
+
 ### Account setup
 
 - Sign in with the e-mail/username and password used for the Tholz account.

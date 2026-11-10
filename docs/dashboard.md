@@ -15,7 +15,7 @@ Leitura da captura:
 - **Cartão "Saída":** temperatura da água na saída do equipamento.
 - **Cartão "Ambiente":** temperatura do ar reportada.
 - **Cartão "ΔT Saída – Entrada":** diferença entre saída e entrada, calculada **no painel**. **Não é uma entidade criada pela integração.** Você pode criá-la com um sensor de modelo, se quiser; o exemplo incluído não a usa.
-- **Cartões "Ligado — 24 h móveis" e "Ciclo — 24 h móveis":** são as métricas de 24 horas do fabricante. Não são medição de energia.
+- **Cartões "Ligado — 24 h móveis" e "Ciclo — 24 h móveis":** mostram o tempo ativo e o percentual calculados pela integração a partir dos registros de atividade do fabricante, na janela móvel de 24 horas. O resumo tem cache de 5 minutos e pode preservar o valor anterior após uma falha que não seja de autenticação; não é medição de energia ([detalhes](operation.md#métricas-das-últimas-24-horas)).
 
 Os nomes dos cartões na captura foram escolhidos pelo autor do painel. Os nomes do exemplo incluído podem ser diferentes.
 
@@ -50,9 +50,9 @@ Para verificar IDs de uma vez, use **Ferramentas do desenvolvedor → Modelos** 
 
 ## Regras de uso do painel
 
-- **Cartão de controle:** os comandos alteram o **equipamento físico**. Confira a entidade antes de usar.
+- **Cartão de controle:** os comandos alteram o **equipamento físico**. Confira a entidade antes de usar. A faixa e o passo da temperatura dependem do modo e dos limites reportados; ações diretas também passam pela validação, sem arredondamento silencioso ([regras](operation.md#limites-e-passo-da-temperatura)).
 - **Indicador "Heat pump running":** mostra o estado reportado de funcionamento. **Não é um interruptor de energia.**
-- **Agendas:** somente leitura. O exemplo as mostra, mas não as altera.
+- **Agendas:** somente leitura. O exemplo as mostra, mas não as altera. Os atributos `repeat_days` e `repeat_description` informam os dias em português, de segunda a domingo, preservando a máscara numérica em `repeat_mask` ([detalhes](operation.md#agendas-somente-leitura)).
 - **Diagnóstico:** separado do controle diário. Não é necessário para operar o aquecedor.
 - O exemplo **não sobrescreve** painéis existentes. Ele é um ponto de partida.
 

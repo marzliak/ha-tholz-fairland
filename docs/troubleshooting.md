@@ -58,7 +58,8 @@ A integração limita os logins automáticos por entrada: no máximo 3 logins co
 
 - Espere alguns segundos. Sucesso exige que o equipamento reporte o novo valor sem mudança pendente, o que pode levar um pouco.
 - Se o valor voltou ao anterior, o equipamento não convergiu para o valor pedido e a integração restaurou o estado anterior. Tente novamente depois de confirmar que o equipamento está online.
-- Use somente os valores permitidos: temperatura de 12 a 40 °C, modos Desligado/Automático/Aquecer/Resfriar e ventilador Silent/Intelligent.
+- Use somente os modos Desligado/Automático/Aquecer/Resfriar e ventilador Silent/Intelligent. Para temperatura no tipo 7: Automático **12–40 °C**, Aquecer **18–40 °C**, Resfriar **12–30 °C**, Desligado **12–40 °C** sem ligar ao definir apenas a temperatura. Limites reportados podem restringir essas faixas.
+- Pedidos fora da faixa, fora dos décimos de grau ou desalinhados ao passo são recusados, sem arredondamento. Limites ou passo malformados e modo desconhecido também impedem o comando de temperatura. A validação usa uma leitura recente: uma mudança externa de modo pode invalidar o valor que a interface mostrava como permitido. Veja [limites e passo](operation.md#limites-e-passo-da-temperatura); não repita o comando em loop.
 
 ### Falha ao restaurar o estado anterior
 
@@ -76,7 +77,9 @@ A integração trata este caso como falha no retorno ao estado anterior (erro in
 
 ### Métricas (24 h) ou agenda vazias
 
-- As métricas vêm do serviço do fabricante e são consultadas no máximo a cada 5 minutos. Após uma falha, os sensores podem ficar sem valor até a próxima consulta bem-sucedida.
+- As linhas de atividade vêm da API do fabricante; a integração calcula o resumo móvel de 24 horas e mantém cache em memória por **5 minutos**, separado do intervalo de atualização do estado.
+- Uma falha de métricas que não seja de autenticação deixa o resumo inicial em `{}` (sensores sem valor, não zero). Se já houve sucesso, preserva o resumo anterior, que pode ficar desatualizado. Após a espera do cache, a próxima leitura tenta consultar novamente.
+- HTTP **401/403** não são ocultados pelo fallback das métricas: seguem o caminho de erro de autenticação/autorização. Confira os avisos da entrada em vez de tratar o valor antigo como uma nova leitura válida.
 - As agendas são lidas junto com o estado. Se a leitura da agenda falhar, as entidades de agenda podem não ser criadas no cadastro. Recarregue a entrada.
 - Nenhuma dessas métricas é de consumo de energia.
 

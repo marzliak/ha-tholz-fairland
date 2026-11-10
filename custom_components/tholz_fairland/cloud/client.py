@@ -18,6 +18,12 @@ from awscrt import mqtt
 from awsiot import mqtt_connection_builder
 
 from .auth_manager import FairlandAuthManager, RecoveryMode
+from .temperature_policy import (
+    MAX_SETPOINT,
+    MIN_SETPOINT,
+    FairlandTemperatureError,
+    temperature_policy,
+)
 from .cognito_auth import (
     CognitoAuthenticator,
     CognitoAuthError,
@@ -52,8 +58,6 @@ SCHEDULE_MINUTE_MAX = 59
 MUTABLE_HEAT_FIELDS = frozenset({"opMode", "sp", "fanMode"})
 VALID_OPERATION_MODES = frozenset({0, 2, 4, 5})
 VALID_FAN_MODES = frozenset({0, 1})
-MIN_SETPOINT = 120
-MAX_SETPOINT = 400
 HTTP_OK = 200
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
@@ -110,14 +114,18 @@ def extract_mutable_changes(
     except (KeyError, TypeError) as exc:
         raise FairlandCloudProtocolError(ERR_WRITE_PATH) from exc
 
+    if not isinstance(requested, dict):
+        raise FairlandCloudProtocolError(ERR_WRITE_PATH)
     current_heat = ((current or {}).get("heatings") or {}).get("heat0") or {}
     changes: dict[str, int] = {}
     for key in MUTABLE_HEAT_FIELDS:
-        if key not in requested or requested[key] == current_heat.get(key):
+        if key not in requested:
             continue
         value = requested[key]
         if isinstance(value, bool) or not isinstance(value, int):
             raise FairlandCloudProtocolError(ERR_INTEGER_FIELD)
+        if value == current_heat.get(key):
+            continue
         changes[key] = value
 
     if "opMode" in changes and changes["opMode"] not in VALID_OPERATION_MODES:
@@ -738,10 +746,29 @@ class FairlandCloudClient:
             cached_reported = self._last_reported
             if cached_reported is None:
                 raise FairlandCloudProtocolError(ERR_NO_REPORTED)
-            changes = extract_mutable_changes(payload, cached_reported)
+            changes = extract_mutable_changes(payload, None)
+            requested_heat = payload["heatings"]["heat0"]
+            if set(requested_heat) - MUTABLE_HEAT_FIELDS:
+                # Legacy full snapshots retain delta semantics. Narrow entity
+                # payloads express intent; decide their no-op against fresh state.
+                changes = extract_mutable_changes(payload, cached_reported)
 
             fresh_reported = self.get_status()
             current_heat = fresh_reported["heatings"]["heat0"]
+            if "sp" in changes:
+                try:
+                    temperature_policy(
+                        current_heat, changes.get("opMode")
+                    ).validate_raw(changes["sp"])
+                except FairlandTemperatureError as exc:
+                    raise FairlandCloudProtocolError(str(exc)) from exc
+            changes = {
+                key: value
+                for key, value in changes.items()
+                if current_heat.get(key) != value
+            }
+            if not changes:
+                return fresh_reported
             try:
                 baseline = {key: current_heat[key] for key in changes}
             except KeyError as exc:

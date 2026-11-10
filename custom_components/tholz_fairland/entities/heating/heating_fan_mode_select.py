@@ -48,7 +48,7 @@ class HeatingFanModeSelect(SelectEntity):
     async def async_select_option(self, option):
         if option not in _OPTION_TO_FAN_MODE:
             return
-        next_state = {**self._state, "fanMode": int(_OPTION_TO_FAN_MODE[option])}
+        next_state = {"fanMode": int(_OPTION_TO_FAN_MODE[option])}
         result = await self._manager.set_status(
             set_in({}, self._heating_key, next_state)
         )

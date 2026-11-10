@@ -42,7 +42,7 @@ The integration sends credentials and device data **only** to the manufacturer's
 
 - **Account authentication** (Amazon Cognito, region `us-east-1`).
 - **Manufacturer API** (AWS API Gateway, region `us-east-1`), for device discovery and the connection authorizer.
-- **24-hour metrics** from the manufacturer (same API).
+- **Manufacturer activity records** (same API), used by the integration to calculate the rolling 24-hour active-time and percentage summary locally. See [Operation](operation.md#24-hour-metrics).
 - **Device messaging** (AWS IoT Core, region `us-east-1`), for reading state and sending commands.
 
 No analytics, telemetry or statistics are sent to this project's maintainers.
