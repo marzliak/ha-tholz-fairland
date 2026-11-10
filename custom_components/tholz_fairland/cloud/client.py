@@ -5,6 +5,7 @@ from __future__ import annotations
 import gzip
 import json
 import logging
+import secrets
 import threading
 import time
 import urllib.parse
@@ -18,6 +19,7 @@ from awscrt import mqtt
 from awsiot import mqtt_connection_builder
 
 from .auth_manager import FairlandAuthManager, RecoveryMode
+from .convergence_diagnostics import ConvergenceTrace
 from .temperature_policy import (
     MAX_SETPOINT,
     MIN_SETPOINT,
@@ -49,6 +51,7 @@ IOT_ENDPOINT = "a20gdo93r3ncps-ats.iot.us-east-1.amazonaws.com"
 METRICS_WINDOW_SECONDS = 24 * 60 * 60
 METRICS_CACHE_SECONDS = 5 * 60
 DEFAULT_CONVERGENCE_TIMEOUT = 45.0
+MAX_CONFIRMATION_RECORD_BYTES = 16_384
 SCHEDULE_SHADOW_NAME = "heat0Schedule"
 SCHEDULE_EVENT_COUNT = 5
 SCHEDULE_REPEAT_MASK_MAX = 127
@@ -306,6 +309,8 @@ class FairlandCloudClient:
         self._metrics_summary: dict[str, float] | None = None
         self._metrics_updated_at = 0.0
         self._state_change_callback: Callable[[], None] | None = None
+        self._last_confirmation_diagnostics: dict[str, Any] | None = None
+        self._confirmation_phase = "unspecified"
 
         shadow = f"$aws/things/{self.thing_id}/shadow"
         self._get_topic = f"{shadow}/get"
@@ -718,6 +723,116 @@ class FairlandCloudClient:
         heat = reported.get("heatings", {}).get("heat0", {})
         return all(heat.get(key) == value for key, value in changes.items())
 
+    def _confirm_noop(self, intent: dict[str, int]) -> dict[str, Any]:
+        self._begin_confirmation_diagnostics("noop")
+        try:
+            result = self._wait_for_convergence(intent)
+        except FairlandCloudError as primary_error:
+            self._finish_confirmation_diagnostics("noop_not_confirmed", primary_error)
+            raise
+        self._finish_confirmation_diagnostics("confirmed")
+        return result
+
+    def _begin_confirmation_diagnostics(self, phase: str) -> None:
+        """Start bounded observability, never an additional control decision."""
+        with suppress(Exception):
+            # Failed setup must not attribute a new attempt to an older record.
+            self._last_confirmation_diagnostics = None
+            self._confirmation_phase = phase
+            self._last_confirmation_diagnostics = {
+                "schema_version": 1,
+                "transaction_ref": secrets.token_hex(8),
+                "outcome": "pending",
+                "publish": {"apply": "not_requested", "restore": "not_requested"},
+                "primary_error": None,
+                "restore_error": None,
+                "capture_errors": 0,
+                "phases": [],
+            }
+
+    def _confirmation_capture_failed(self) -> None:
+        with suppress(Exception):
+            data = self._last_confirmation_diagnostics
+            if isinstance(data, dict):
+                data["capture_errors"] = min(data["capture_errors"] + 1, 1_000_000)
+
+    def _confirmation_publish_state(self, phase: str, state: str) -> None:
+        with suppress(Exception):
+            data = self._last_confirmation_diagnostics
+            if isinstance(data, dict):
+                data["publish"][phase] = state
+
+    def _record_confirmation_trace(self, trace, outcome: str) -> None:
+        try:
+            if trace is None:
+                return
+            row = trace.finish(outcome)
+            # Only the transaction boundary may initialize the record. If that
+            # failed, leave it unavailable; never invent publication history.
+            data = self._last_confirmation_diagnostics
+            if isinstance(data, dict):
+                data["phases"] = [*data["phases"][-1:], row]
+        except Exception:
+            self._confirmation_capture_failed()
+
+    @staticmethod
+    def _confirmation_error_tag(error: FairlandCloudError | None) -> str | None:
+        """Expose source-defined tags, not arbitrary exception messages."""
+        if error is None:
+            return None
+        tags = {
+            "ERR_UPDATE_CONVERGENCE": ERR_UPDATE_CONVERGENCE,
+            "ERR_UPDATE_PUBLISH": ERR_UPDATE_PUBLISH,
+            "ERR_UPDATE_ACCEPT": ERR_UPDATE_ACCEPT,
+            "ERR_GET_PUBLISH": ERR_GET_PUBLISH,
+            "ERR_GET_TIMEOUT": ERR_GET_TIMEOUT,
+            "ERR_GET_EMPTY": ERR_GET_EMPTY,
+            "ERR_NO_REPORTED": ERR_NO_REPORTED,
+            "ERR_NO_HEAT": ERR_NO_HEAT,
+            "ERR_MQTT_CONNECT": ERR_MQTT_CONNECT,
+            "ERR_IOT_AUTHORIZER": ERR_IOT_AUTHORIZER,
+            "ERR_COGNITO_REFRESH": ERR_COGNITO_REFRESH,
+        }
+        if len(error.args) == 1 and type(error.args[0]) is str:
+            for tag, message in tags.items():
+                if error.args[0] == message:
+                    return tag
+        return "UNCLASSIFIED"
+
+    def get_last_confirmation_diagnostics(self) -> dict[str, Any] | None:
+        """Return a detached, bounded record; no account or device IO."""
+        with self._lock, suppress(Exception):
+            data = self._last_confirmation_diagnostics
+            if data is None:
+                return None
+            encoded = json.dumps(data, allow_nan=False, separators=(",", ":"))
+            if len(encoded.encode("utf-8")) <= MAX_CONFIRMATION_RECORD_BYTES:
+                return json.loads(encoded)
+        return None
+
+    def _finish_confirmation_diagnostics(
+        self,
+        outcome: str,
+        primary_error: FairlandCloudError | None = None,
+        restore_error: FairlandCloudError | None = None,
+    ) -> None:
+        """Record auxiliary results without replacing the primary outcome."""
+        with suppress(Exception):
+            data = self._last_confirmation_diagnostics
+            if not isinstance(data, dict):
+                return
+            data["outcome"] = outcome
+            data["primary_error"] = self._confirmation_error_tag(primary_error)
+            data["restore_error"] = self._confirmation_error_tag(restore_error)
+            for phase in ("apply", "restore"):
+                if data["publish"][phase] == "requested":
+                    data["publish"][phase] = "not_confirmed"
+            if primary_error is not None:
+                encoded = json.dumps(data, allow_nan=False, separators=(",", ":"))
+                if len(encoded.encode("utf-8")) > MAX_CONFIRMATION_RECORD_BYTES:
+                    encoded = '{"schema_version":1,"outcome":"diagnostic_size_limit"}'
+                _LOGGER.warning("Fairland confirmation diagnostic: %s", encoded)
+
     @classmethod
     def _converged(cls, document: dict[str, Any], changes: dict[str, int]) -> bool:
         reported = cls._reported(document)
@@ -745,15 +860,39 @@ class FairlandCloudClient:
             raise FairlandCloudProtocolError(ERR_UPDATE_ACCEPT)
 
     def _wait_for_convergence(self, changes: dict[str, int]) -> dict[str, Any]:
-        deadline = time.monotonic() + self._convergence_timeout
-        while time.monotonic() < deadline:
-            document = self._request_shadow()
-            reported = self._with_cached_metrics(self._reported(document))
-            self._last_reported = reported
-            if self._converged(document, changes):
-                return reported
-            time.sleep(0.5)
-        raise FairlandCloudProtocolError(ERR_UPDATE_CONVERGENCE)
+        trace = None
+        try:
+            trace = ConvergenceTrace(changes, phase=self._confirmation_phase)
+        except Exception:
+            self._confirmation_capture_failed()
+        outcome = "error"
+        try:
+            deadline = time.monotonic() + self._convergence_timeout
+            while time.monotonic() < deadline:
+                document = self._request_shadow()
+                reported = self._with_cached_metrics(self._reported(document))
+                self._last_reported = reported
+                # This is the unchanged canonical decision. Diagnostics neither
+                # authorize a command nor relax the global empty-delta rule.
+                converged = self._converged(document, changes)
+                try:
+                    if trace is not None:
+                        trace.observe(
+                            document,
+                            reported_matches=self._matches(reported, changes),
+                            delta_empty=not document.get("state", {}).get("delta"),
+                        )
+                except Exception:
+                    self._confirmation_capture_failed()
+                if converged:
+                    outcome = "confirmed"
+                    return reported
+                time.sleep(0.5)
+            outcome = "timeout"
+            raise FairlandCloudProtocolError(ERR_UPDATE_CONVERGENCE)
+        finally:
+            with suppress(Exception):
+                self._record_confirmation_trace(trace, outcome)
 
     def set_status(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Publish an allowlisted delta and require reported-state convergence."""
@@ -784,7 +923,7 @@ class FairlandCloudClient:
             if not changes:
                 # A no-op sends nothing, but still checks reported convergence
                 # and an empty delta before claiming successful completion.
-                return self._wait_for_convergence(intent)
+                return self._confirm_noop(intent)
             baseline = {key: current[key] for key in changes}
             if "sp" in baseline:
                 try:
@@ -793,17 +932,31 @@ class FairlandCloudClient:
                     raise FairlandCloudProtocolError(ERR_UNSAFE_BASELINE) from exc
 
             self._ensure_connection()
+            self._begin_confirmation_diagnostics("apply")
             try:
+                self._confirmation_publish_state("apply", "requested")
                 self._publish_changes(changes)
-                return self._wait_for_convergence(changes)
-            except FairlandCloudError:
+                self._confirmation_publish_state("apply", "accepted")
+                result = self._wait_for_convergence(changes)
+            except FairlandCloudError as primary_error:
                 # Any failure after publish (protocol, transient or auth) may
                 # leave the device at the requested state; always try to restore.
                 try:
+                    self._confirmation_phase = "restore"
+                    self._confirmation_publish_state("restore", "requested")
                     self._publish_changes(baseline)
+                    self._confirmation_publish_state("restore", "accepted")
                     self._wait_for_convergence(baseline)
                 except FairlandCloudError as rollback_exc:
+                    self._finish_confirmation_diagnostics(
+                        "restore_failed", primary_error, rollback_exc
+                    )
                     raise FairlandCloudProtocolError(
                         ERR_ROLLBACK_FAILED
                     ) from rollback_exc
+                self._finish_confirmation_diagnostics(
+                    "restored_after_failure", primary_error
+                )
                 raise
+            self._finish_confirmation_diagnostics("confirmed")
+            return result
