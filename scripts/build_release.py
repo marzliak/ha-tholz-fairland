@@ -28,6 +28,7 @@ SOURCE_TOP_FILES = (
     "hacs.json",
     "requirements.txt",
     "requirements-ha2026.txt",
+    "requirements-ha202611.txt",
     "pyproject.toml",
 )
 SOURCE_TREES = (".github", "custom_components", "docs", "examples", "scripts", "tests")

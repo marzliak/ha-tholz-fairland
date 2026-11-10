@@ -20,10 +20,19 @@ jobs:
           - python: "3.13"
             requirements: requirements.txt
             home_assistant: "2025.2.4"
+            framework: pytest-homeassistant-custom-component
+            pytest_addopts: ""
           - python: "3.14"
             requirements: requirements-ha2026.txt
             home_assistant: "2026.10.1"
-    name: Home Assistant ${{ matrix.home_assistant }}
+            framework: pytest-homeassistant-custom-component
+            pytest_addopts: ""
+          - python: "3.14.9"
+            requirements: requirements-ha202611.txt
+            home_assistant: "2026.11.1"
+            framework: pytest-homeassistant
+            pytest_addopts: "-p no:respx"
+    name: Core ${{ matrix.home_assistant }} / ${{ matrix.framework }} / Python ${{ matrix.python }}
     env:
       PYTHONDONTWRITEBYTECODE: "1"
       RUFF_NO_CACHE: "true"
@@ -42,7 +51,11 @@ jobs:
         env:
           REQUIREMENTS_FILE: ${{ matrix.requirements }}
         run: python3 -m pip install -r "$REQUIREMENTS_FILE"
+      - name: Check dependency consistency
+        run: python3 -m pip check
       - name: Run tests with real network access disabled
+        env:
+          PYTEST_ADDOPTS: ${{ matrix.pytest_addopts }}
         run: python3 -m pytest -p no:cacheprovider --disable-socket --allow-unix-socket
       - name: Run Ruff
         run: python3 -m ruff check .

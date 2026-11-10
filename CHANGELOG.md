@@ -4,6 +4,17 @@ User-visible changes to Tholz Fairland for Home Assistant.
 
 ## 0.3.0 — prepared version, not publicly released
 
+### Test infrastructure
+
+- Add a separate Home Assistant Core 2026.11.1 / Python 3.14.9 test stack using the matching official `pytest-homeassistant` framework and Core constraints.
+- Retain the Core 2025.2.4 and 2026.10.1 legacy test stacks, with framework-aware helper imports and the respx pytest-plugin option limited to the official stack.
+- Keep this test-harness update separate from integration behavior, live-account checks and physical-equipment acceptance.
+
+### Confirmation diagnostics
+
+- Provide bounded, sanitized observations for command confirmation and automatic restoration without logging account credentials or complete device snapshots.
+- Preserve command intent, confirmation criteria, timeout and the original command/restoration outcomes when diagnostic collection fails.
+
 ### Temperature validation
 
 - Share one temperature policy between the water-heater entity and command transport: Automatic 12–40 °C, Heat 18–40 °C, and Cool 12–30 °C for the supported Fairland family.

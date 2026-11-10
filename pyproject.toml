@@ -5,3 +5,7 @@
 # autouse fixtures. Set here so every supported pytest-asyncio version agrees.
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+pythonpath = ["."]
+testpaths = ["tests"]
+# The official framework also needs -p no:respx; set it only for that stack
+# in the workflow matrix or local pytest command, not for legacy stacks.

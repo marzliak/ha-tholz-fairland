@@ -5,12 +5,12 @@ from __future__ import annotations
 import copy
 import logging
 import time
+from importlib.util import find_spec
 
 import pytest
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.data_entry_flow import FlowResultType
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.tholz_fairland.cloud.client import (
     API_BASE_URL,
@@ -24,6 +24,12 @@ from custom_components.tholz_fairland.cloud.cognito_auth import (
     CognitoAuthenticator,
 )
 from custom_components.tholz_fairland.utils.const import DOMAIN
+
+# Do not hide a broken official installation behind the legacy framework.
+if find_spec("pytest_homeassistant") is not None:
+    from pytest_homeassistant.common import MockConfigEntry
+else:
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 pytestmark = pytest.mark.asyncio
 

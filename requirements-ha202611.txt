@@ -1,0 +1,13 @@
+# Official test stack: Home Assistant Core 2026.11.1 / Python 3.14.9.
+# Resolve normally against the matching Core constraints; do not force overrides.
+-c https://raw.githubusercontent.com/home-assistant/core/2026.11.1/homeassistant/package_constraints.txt
+awsiotsdk==1.31.0
+boto3==1.42.97
+botocore==1.42.97
+homeassistant==2026.11.1
+pycognito==2024.5.1
+pytest==9.0.3
+pytest-asyncio==1.4.0
+pytest-homeassistant==2026.11.1
+pytest-socket==0.8.1
+ruff==0.15.22

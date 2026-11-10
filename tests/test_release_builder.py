@@ -74,6 +74,7 @@ def test_source_archive_is_rooted_at_one_versioned_directory(tmp_path: Path) -> 
     assert all(name.startswith(root) for name in names)
     assert f"{root}tests/test_release_builder.py" in names
     assert f"{root}scripts/build_release.py" in names
+    assert f"{root}requirements-ha202611.txt" in names
     assert not any(".git/" in name or "__pycache__" in name for name in names)
 
 
