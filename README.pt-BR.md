@@ -18,6 +18,14 @@ Ela apresenta o equipamento como um aquecedor (water heater) do Home Assistant e
 
 Versão desta documentação: **0.3.0 (candidata privada)**. Não há release publicada.
 
+## Estado de validação
+
+Foram verificados o cadastro com conta real, o carregamento das entidades, as leituras de estado e o descarregamento/recarregamento da integração. Esses resultados comprovam os fluxos verificados de cadastro e acompanhamento; não certificam todos os comandos físicos nem a exatidão das medições de temperatura.
+
+**O comando de temperatura-alvo não passou no aceite físico.** Nos ensaios observados com o aquecedor desligado, a mudança solicitada não foi confirmada. Isso não prova uma restrição do firmware e não invalida o cadastro e o acompanhamento já verificados. Mudar a temperatura em Desligado **não é requisito para usar essas funções**, e nenhum novo ensaio de temperatura é necessário para o uso somente leitura. Testes automatizados e faixas de entrada aceitas não comprovam que um comando físico foi aplicado.
+
+Esta nota não altera o código nem as proteções dos comandos. A versão preparada continua privada e sem release publicada.
+
 ## Recursos
 
 - **Controle do aquecedor:** Desligado, Automático, Aquecer e Resfriar; temperatura-alvo por modo no tipo 7: **Automático 12–40 °C**, **Aquecer 18–40 °C** e **Resfriar 12–30 °C**.
@@ -53,7 +61,7 @@ A restauração é uma tentativa, não uma garantia. Confira o aplicativo ou o e
 
 ## Requisitos
 
-- Home Assistant **2025.2.4 ou mais recente**. Testes automatizados passaram em **2025.2.4** e **2026.10.1**, com serviços de nuvem simulados; versões intermediárias e todas as combinações de modelos não são certificadas.
+- Home Assistant **2025.2.4 ou mais recente**. Testes automatizados passaram em **2025.2.4**, **2026.10.1** e **2026.11.1**, com serviços de nuvem simulados; versões intermediárias e todas as combinações de modelos não são certificadas.
 - Uma bomba de calor Fairland / TurboSilence já vinculada à conta do fabricante.
 - E-mail ou usuário e senha dessa conta.
 - Acesso à internet do Home Assistant para a nuvem do fabricante e serviços AWS.

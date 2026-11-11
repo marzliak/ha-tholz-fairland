@@ -14,6 +14,14 @@ An unofficial custom integration for cloud-connected **Tholz Fairland / TurboSil
 
 > Not affiliated with or endorsed by Tholz, Fairland, or Home Assistant. An internet connection and the manufacturer's cloud service are required. This project does not provide a local-control fallback.
 
+## Validation status
+
+Real-account setup, entity loading, state reads, and unloading/reloading the integration have been verified. These results support using the verified setup and monitoring features; they are not a certification of every physical control or temperature measurement.
+
+**Target-temperature commands have not passed physical acceptance.** In the observed trials with the heat pump Off, the requested target change was not confirmed. This does not establish a firmware restriction and does not invalidate the verified setup and monitoring features. Changing the target while Off is **not a prerequisite for using those features**, and no additional temperature trial is required for read-only use. Automated tests and accepted input ranges do not prove that a physical command took effect.
+
+This status note does not change the integration's code or command safeguards. The prepared version remains private and unreleased.
+
 ## At a glance
 
 | Control | Observe | Connect |

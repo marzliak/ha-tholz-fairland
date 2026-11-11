@@ -4,6 +4,12 @@ User-visible changes to Tholz Fairland for Home Assistant.
 
 ## 0.3.0 — prepared version, not publicly released
 
+### Validation scope
+
+- Document verified real-account setup, entity loading, state reads and integration unload/reload separately from physical command acceptance.
+- Record that target-temperature changes were not confirmed in the observed Off-state trials, without inferring a firmware restriction or invalidating verified monitoring. A temperature change is not a prerequisite for using setup and read-only features.
+- Keep command safeguards and runtime code unchanged; this clarification does not publish a release or certify untested physical controls.
+
 ### Test infrastructure
 
 - Add a separate Home Assistant Core 2026.11.1 / Python 3.14.9 test stack using the matching official `pytest-homeassistant` framework and Core constraints.
