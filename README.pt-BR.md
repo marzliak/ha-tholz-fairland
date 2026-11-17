@@ -4,6 +4,8 @@
 
 # Tholz Fairland para Home Assistant
 
+[![Abra seu Home Assistant e adicione este repositório ao HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=marzliak&repository=ha-tholz-fairland&category=integration)
+
 **Seu trocador de calor integrado aos painéis e às rotinas do Home Assistant.**
 
 [Read in English](README.md) · [Guia completo](docs/README.md) · [Instalação](docs/installation.md) · [Configuração](docs/configuration.md) · [Solução de problemas](docs/troubleshooting.md)
@@ -16,7 +18,7 @@ Ela apresenta o equipamento como um aquecedor (water heater) do Home Assistant e
 
 > Este projeto não é afiliado nem endossado pela Tholz ou pela Fairland. Ele depende da nuvem do fabricante e pode deixar de funcionar se esse serviço ou suas interfaces mudarem.
 
-Versão desta documentação: **0.3.0 (candidata privada)**. Não há release publicada.
+**0.3.0 é a primeira versão pública (2026-11-16).** Veja a [release](https://github.com/marzliak/ha-tholz-fairland/releases/tag/v0.3.0).
 
 ## Estado de validação
 
@@ -24,7 +26,7 @@ Foram verificados o cadastro com conta real, o carregamento das entidades, as le
 
 **O comando de temperatura-alvo não passou no aceite físico.** Nos ensaios observados com o aquecedor desligado, a mudança solicitada não foi confirmada. Isso não prova uma restrição do firmware e não invalida o cadastro e o acompanhamento já verificados. Mudar a temperatura em Desligado **não é requisito para usar essas funções**, e nenhum novo ensaio de temperatura é necessário para o uso somente leitura. Testes automatizados e faixas de entrada aceitas não comprovam que um comando físico foi aplicado.
 
-Esta nota não altera o código nem as proteções dos comandos. A versão preparada continua privada e sem release publicada.
+A disponibilidade pública não altera as proteções dos comandos nem certifica controles físicos não validados.
 
 ## Recursos
 
@@ -68,13 +70,20 @@ A restauração é uma tentativa, não uma garantia. Confira o aplicativo ou o e
 
 ## Instalação
 
-Nesta versão candidata, use o pacote manual:
+### Pelo HACS
 
-1. Baixe `tholz-fairland-0.3.0-integration.zip`.
-2. Copie `custom_components/tholz_fairland` para a pasta `custom_components` do Home Assistant.
+**O HACS já deve estar instalado.** Use o botão acima para adicionar este repositório personalizado, abra Tholz Fairland no HACS e confirme **Download**. Reinicie o Home Assistant e vá em **Configurações → Dispositivos e serviços → Adicionar integração → Tholz Fairland**.
+
+Alternativa: em **HACS → ⋮ → Repositórios personalizados**, informe `https://github.com/marzliak/ha-tholz-fairland` e selecione a categoria **Integration**. Adicione, confirme o download, reinicie e adicione a integração. **A inclusão no catálogo padrão do HACS ainda não foi aprovada**; a instalação por repositório personalizado não significa listagem no catálogo.
+
+### Pelo pacote manual
+
+1. Baixe e extraia o [pacote manual 0.3.0](https://github.com/marzliak/ha-tholz-fairland/releases/download/v0.3.0/tholz-fairland-0.3.0-integration.zip).
+2. Copie a pasta `tholz_fairland` de `custom_components/` do pacote para `custom_components/` do Home Assistant.
 3. Reinicie o Home Assistant.
+4. Vá em **Configurações → Dispositivos e serviços → Adicionar integração → Tholz Fairland**.
 
-A instalação pelo HACS será documentada após a publicação. O guia completo está em [docs/installation.md](docs/installation.md).
+O guia completo está em [docs/installation.md](docs/installation.md).
 
 ## Configuração
 

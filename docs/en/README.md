@@ -1,4 +1,4 @@
-# Documentation — Tholz Fairland 0.3.0 (release candidate)
+# Documentation — Tholz Fairland 0.3.0
 
 User guides in English. The Portuguese (PT-BR) originals are in [`../`](../README.md) and are the reference text if the two ever differ.
 
@@ -6,9 +6,9 @@ User guides in English. The Portuguese (PT-BR) originals are in [`../`](../READM
 
 ## Status of this release
 
-- **Release candidate 0.3.0.** No public release exists yet.
+- **First public release: [0.3.0](https://github.com/marzliak/ha-tholz-fairland/releases/tag/v0.3.0), dated 2026-11-16.**
 - **Installation available now:** manual package (`tholz-fairland-0.3.0-integration.zip`), described in [Installation](installation.md).
-- **HACS:** not available for this candidate. It will be documented after publication.
+- **HACS:** custom-repository installation, described in [Installation](installation.md). Default-catalogue inclusion has not yet been approved.
 - **Home Assistant compatibility:** network-blocked automated tests passed on **2025.2.4** and **2026.10.1**, including configuration, entity setup, reload, and reauthentication with mocked services. This does not certify every intermediate version or replace verification with your own account/equipment.
 
 ## Reading order
@@ -24,7 +24,7 @@ User guides in English. The Portuguese (PT-BR) originals are in [`../`](../READM
 | [Privacy and security](privacy.md) | Stored data, external services, backup handling | [../privacy.md](../privacy.md) |
 | [Updating](updating.md) | Updating, migrating existing entries, reverting | [../updating.md](../updating.md) |
 | [FAQ](FAQ.md) | Common questions | [../FAQ.md](../FAQ.md) |
-| [Release notes 0.3.0](releases/0.3.0.md) | What changed in this candidate | — |
+| [Release notes 0.3.0](releases/0.3.0.md) | What changed in this release | — |
 | [Examples](../../examples/README.md) | Native dashboard and optional automations, ready to adapt | — |
 
 ## How to read the images

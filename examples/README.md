@@ -1,6 +1,6 @@
 # Examples
 
-Optional, copy-and-adapt files for Tholz Fairland 0.3.0 (release candidate). Nothing in this folder is installed or enabled automatically.
+Optional, copy-and-adapt files for Tholz Fairland 0.3.0. Nothing in this folder is installed or enabled automatically.
 
 Full guides (PT-BR): [`docs/dashboard.md`](../docs/dashboard.md) and [`docs/automations.md`](../docs/automations.md). English: [`docs/en/dashboard.md`](../docs/en/dashboard.md) and [`docs/en/automations.md`](../docs/en/automations.md).
 
@@ -46,8 +46,8 @@ Entities referenced by the examples:
 
 ## Verification status
 
-The YAML in this folder was parsed for syntax. It has **not yet been loaded into a running Home Assistant** in this release candidate. Confirm it in your installation before relying on it.
+The YAML in this folder was parsed for syntax. It has **not yet been loaded into a running Home Assistant** for this release. Confirm it in your installation before relying on it.
 
 ## Water-heater card
 
-The `thermostat` card used in `dashboard-native.yaml` is shown with a `water_heater` entity in the example. Compatibility of that combination was not verified against the Home Assistant documentation for this candidate; confirm it on your version.
+The `thermostat` card used in `dashboard-native.yaml` is shown with a `water_heater` entity in the example. Compatibility of that combination was not verified against the Home Assistant documentation for this release; confirm it on your version.

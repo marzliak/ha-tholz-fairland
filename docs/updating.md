@@ -10,7 +10,7 @@ Este guia explica como atualizar a integração, o que acontece com entradas exi
 
 ## Atualizar pelo pacote manual
 
-1. Baixe o pacote da versão nova (`tholz-fairland-0.3.0-integration.zip` para a candidata).
+1. Baixe o pacote da versão nova na [página da release](https://github.com/marzliak/ha-tholz-fairland/releases/tag/v0.3.0) (`tholz-fairland-0.3.0-integration.zip` para 0.3.0).
 2. Se a versão antiga estiver em `custom_components/tholz_fairland/`, **mova a pasta antiga** para fora de `custom_components` (por exemplo, para `/config/.tholz-backup-<versão>/`).
 3. Copie a pasta `tholz_fairland` do pacote novo para `custom_components/`.
 4. Reinicie o Home Assistant ([Instalação](installation.md)).
@@ -20,7 +20,7 @@ Não deixe duas pastas de versões diferentes dentro de `custom_components`. A p
 
 ## Atualização pelo HACS
 
-**Indisponível nesta candidata.** O HACS será documentado após a publicação do repositório.
+Se instalou pelo HACS, abra **Tholz Fairland** no HACS, selecione a atualização e confirme **Download**. Reinicie o Home Assistant e confira as entidades e os registros. Não é necessário remover nem adicionar novamente a entrada. Para a primeira instalação por repositório personalizado, veja [Instalação](installation.md); a inclusão no catálogo padrão ainda não foi aprovada.
 
 ## Entradas existentes são migradas
 

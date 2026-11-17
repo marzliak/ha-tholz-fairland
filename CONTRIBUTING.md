@@ -42,7 +42,7 @@ The test suite exercises actual Home Assistant setup, entities, unload/reload an
 
 The local builder creates deterministic integration and source ZIPs plus `SHA256SUMS.txt`. It does not create Git tags, GitHub releases, uploads, or visibility changes. Output must be outside the checkout and absent or empty. Treat release publication as a separate maintainer decision.
 
-HACS online validation requires a public repository and is deliberately skipped while the repository is private. This skip is not a validation pass. Repository structure, manifest, bundled brand assets, packaging and Home Assistant tests can be checked privately.
+HACS online validation runs against the public repository. Check the actual HACS and hassfest CI results before publishing a release; a skipped job is not a validation pass. HACS custom-repository installation is separate from default-catalogue approval, which has not yet been granted.
 
 Never commit real credentials, account or device identifiers, Home Assistant storage, logs containing private data, or vendor application artifacts. Tests must use synthetic values and must not contact or control real equipment.
 

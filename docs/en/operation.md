@@ -63,7 +63,7 @@ Important:
 - The **current temperature** of the water heater entity (`<name> Pool`) is the **inlet** reading, not the outlet or ambient reading.
 - In the example dashboard capture, the card labelled **Entrada / Piscina** shows the **inlet water** temperature. **It is not a separate pool probe.** If the pool water differs from the inlet reading, that is expected: the reading reflects the water passing through the device.
 - The integration does not calibrate the sensors. Values are whatever the manufacturer reports.
-- This candidate has not been checked against a physical probe layout. Confirm readings against the device or the manufacturer's app.
+- This release has not been checked against a physical probe layout. Confirm readings against the device or the manufacturer's app.
 
 ## Meaning of the indicators
 

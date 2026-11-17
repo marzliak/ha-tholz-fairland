@@ -63,7 +63,7 @@ The integration limits automatic password logins per config entry: at most 3 per
 
 ### Failed to restore the previous state
 
-The integration treats this case as a failed return to the previous state (internal error `ROLLBACK_FAILED`). The device may be in a state different from what Home Assistant expects. In this candidate, the exact text shown in the interface is not guaranteed; note the time and the value you tried to set.
+The integration treats this case as a failed return to the previous state (internal error `ROLLBACK_FAILED`). The device may be in a state different from what Home Assistant expects. In this release, the exact text shown in the interface is not guaranteed; note the time and the value you tried to set.
 
 - **Check the device physically** and in the manufacturer app before sending any other command.
 - Adjust mode, temperature and fan from the app or Home Assistant only after confirming the real state.

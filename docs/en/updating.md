@@ -10,7 +10,7 @@ This guide explains how to update the integration, what happens to existing entr
 
 ## Update with the manual package
 
-1. Download the new package (`tholz-fairland-0.3.0-integration.zip` for this candidate).
+1. Download the new package from the [release page](https://github.com/marzliak/ha-tholz-fairland/releases/tag/v0.3.0) (`tholz-fairland-0.3.0-integration.zip` for 0.3.0).
 2. If the old version is in `custom_components/tholz_fairland/`, **move the old folder** outside `custom_components` (for example to `/config/.tholz-backup-<version>/`).
 3. Copy the `tholz_fairland` folder from the new package into `custom_components/`.
 4. Restart Home Assistant ([Installation](installation.md)).
@@ -20,7 +20,7 @@ Do not leave two folders of different versions inside `custom_components`. The o
 
 ## Update through HACS
 
-**Not available for this candidate.** HACS will be documented after the repository is published.
+If installed through HACS, open **Tholz Fairland** in HACS, select the update and confirm **Download**. Restart Home Assistant and check entities and logs. You do not need to remove or re-add the configuration entry. For first-time custom-repository installation, see [Installation](installation.md); default-catalogue inclusion has not yet been approved.
 
 ## Existing entries are migrated
 

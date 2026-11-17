@@ -4,6 +4,8 @@
 
 # Tholz Fairland for Home Assistant
 
+[![Open your Home Assistant instance and add this HACS repository](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=marzliak&repository=ha-tholz-fairland&category=integration)
+
 **Your pool heat pump, connected to your Home Assistant routines.**
 
 An unofficial custom integration for cloud-connected **Tholz Fairland / TurboSilence pool heat pumps**. Change the operating mode, adjust the target water temperature, choose the fan mode, and understand what the equipment is doing—from one device page or your own dashboard.
@@ -20,7 +22,7 @@ Real-account setup, entity loading, state reads, and unloading/reloading the int
 
 **Target-temperature commands have not passed physical acceptance.** In the observed trials with the heat pump Off, the requested target change was not confirmed. This does not establish a firmware restriction and does not invalidate the verified setup and monitoring features. Changing the target while Off is **not a prerequisite for using those features**, and no additional temperature trial is required for read-only use. Automated tests and accepted input ranges do not prove that a physical command took effect.
 
-This status note does not change the integration's code or command safeguards. The prepared version remains private and unreleased.
+Public availability does not change the integration's command safeguards or certify untested physical controls.
 
 ## At a glance
 
@@ -88,7 +90,7 @@ Supported-family discovery does not certify every model, firmware, or account ar
 
 ### Manual installation
 
-The prepared version is **0.3.0**. During private preparation there is no public release or tag to download. Install from the supplied integration package, or from a checked-out copy of the prepared branch.
+**0.3.0 is the first public release (2026-11-16).** See the [release page](https://github.com/marzliak/ha-tholz-fairland/releases/tag/v0.3.0) and download the [manual integration package](https://github.com/marzliak/ha-tholz-fairland/releases/download/v0.3.0/tholz-fairland-0.3.0-integration.zip).
 
 1. Back up Home Assistant before adding or updating a custom integration.
 2. Extract `tholz-fairland-0.3.0-integration.zip`.
@@ -98,9 +100,11 @@ The prepared version is **0.3.0**. During private preparation there is no public
 
 The [installation guide](docs/en/installation.md) covers Home Assistant OS, Container, file placement, common mistakes, and removal.
 
-### HACS installation, after public availability
+### HACS installation
 
-HACS installation becomes available **after the repository is public**. It is not a way to install this currently private repository. Once available, add the repository as an **Integration** custom repository, install it, and restart Home Assistant. Listing in HACS's default catalogue is separate from custom-repository installation; it is not claimed here.
+**HACS must already be installed.** Use the badge above to add this custom repository, open Tholz Fairland in HACS, and confirm **Download**. Restart Home Assistant, then go to **Settings → Devices & services → Add integration → Tholz Fairland**.
+
+Alternatively, open **HACS → ⋮ → Custom repositories**, enter `https://github.com/marzliak/ha-tholz-fairland`, select category **Integration**, and add it. Then download, restart, and add the integration as above. **Inclusion in HACS's default catalogue has not yet been approved**; custom-repository installation does not imply catalogue listing.
 
 ### Account setup
 

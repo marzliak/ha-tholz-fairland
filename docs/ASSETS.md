@@ -1,8 +1,7 @@
 # Visual assets: origin, licence and credits
 
-Status: private release candidate 0.3.0. Nothing here is published. This file records
-what each visual is and where it came from, so that a later public release can be
-checked against it.
+Visual asset inventory for public release 0.3.0 (2026-11-16). This file records
+what each visual is, where it came from and its licence.
 
 ## Categories
 
@@ -39,8 +38,7 @@ and in each image's own caption where a caption is possible.
 `docs/images/dashboard-overview.png` is an existing real screenshot, kept unmodified. It
 shows a generic example device with example values, with no private labels or locators.
 
-It is an example of the interface, not evidence of new testing for this release
-candidate.
+It is an example of the interface, not evidence of new testing for this release.
 
 ## Note on the hero photograph
 

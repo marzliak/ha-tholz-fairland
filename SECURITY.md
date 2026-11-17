@@ -2,13 +2,13 @@
 
 ## Supported versions
 
-Security fixes are targeted at the current maintained version. Version 0.3.0 is being prepared privately; no public tagged release is currently available.
+Security fixes are targeted at the current maintained version, [0.3.0](https://github.com/marzliak/ha-tholz-fairland/releases/tag/v0.3.0), the first public release (2026-11-16).
 
 ## Reporting a vulnerability
 
 Do not open a public issue for a suspected vulnerability or for any report containing credentials, tokens, account identifiers, device identifiers, Home Assistant storage, backups, or unsanitized logs.
 
-Use GitHub's **Report a vulnerability** action in the repository's Security tab when that private-reporting channel is available. Private reporting is not currently available during the repository's private preparation. If the action is absent, contact the maintainer privately to agree a confidential channel; do not use a public issue or send account credentials. Include:
+Use GitHub's **Report a vulnerability** action in the repository's Security tab to send a private report. If you cannot access that action, contact the maintainer privately to agree a confidential channel; do not use a public issue or send account credentials. Include:
 
 - the affected integration version and Home Assistant version;
 - a concise reproduction using synthetic data where possible;

@@ -63,7 +63,7 @@ A integração limita os logins automáticos por entrada: no máximo 3 logins co
 
 ### Falha ao restaurar o estado anterior
 
-A integração trata este caso como falha no retorno ao estado anterior (erro interno `ROLLBACK_FAILED`). Isso significa que o equipamento pode estar em um estado diferente do esperado. Nesta candidata, o texto exato exibido na interface não é garantido; registre a hora do ocorrido e o valor que você tentou definir.
+A integração trata este caso como falha no retorno ao estado anterior (erro interno `ROLLBACK_FAILED`). Isso significa que o equipamento pode estar em um estado diferente do esperado. Nesta versão, o texto exato exibido na interface não é garantido; registre a hora do ocorrido e o valor que você tentou definir.
 
 - **Verifique o equipamento fisicamente** e pelo aplicativo do fabricante antes de qualquer outro comando.
 - Ajuste o modo, a temperatura e o ventilador pelo aplicativo ou pelo Home Assistant somente depois de confirmar o estado real.

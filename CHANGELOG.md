@@ -2,13 +2,19 @@
 
 User-visible changes to Tholz Fairland for Home Assistant.
 
-## 0.3.0 — prepared version, not publicly released
+## 0.3.0 — 2026-11-16 — first public release
+
+### HACS and installation
+
+- Publish [v0.3.0](https://github.com/marzliak/ha-tholz-fairland/releases/tag/v0.3.0) with the [manual integration ZIP](https://github.com/marzliak/ha-tholz-fairland/releases/download/v0.3.0/tholz-fairland-0.3.0-integration.zip).
+- Document HACS custom-repository installation with the official install badge, download confirmation, restart and integration setup sequence.
+- HACS default-catalogue inclusion has not yet been approved; custom-repository installation is separate from catalogue listing.
 
 ### Validation scope
 
 - Document verified real-account setup, entity loading, state reads and integration unload/reload separately from physical command acceptance.
 - Record that target-temperature changes were not confirmed in the observed Off-state trials, without inferring a firmware restriction or invalidating verified monitoring. A temperature change is not a prerequisite for using setup and read-only features.
-- Keep command safeguards and runtime code unchanged; this clarification does not publish a release or certify untested physical controls.
+- Public availability does not change command safeguards or certify untested physical controls.
 
 ### Test infrastructure
 
@@ -85,5 +91,3 @@ User-visible changes to Tholz Fairland for Home Assistant.
 - Integration error/log handling is designed to exclude credentials; broad third-party DEBUG request logging must remain disabled.
 - Commands are limited to operating mode, target temperature, and fan mode. Schedules are read-only.
 - The integration requires the vendor cloud; it does not add local control, an energy meter, or circulation-pump control.
-
-No public tag or release has been created for this prepared version.

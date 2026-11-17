@@ -63,7 +63,7 @@ Importante:
 - A **temperatura atual** do aquecedor (`<nome> Pool`) é a leitura de **entrada**, não a de saída nem a ambiente.
 - Na captura do painel de exemplo, o cartão **Entrada / Piscina** mostra a temperatura da **água na entrada** do equipamento. **Não é uma sonda separada da piscina.** Se a água da piscina estiver muito diferente da leitura de entrada, isso é esperado: a leitura reflete o que passa pelo equipamento.
 - A integração não calibra os sensores. Os valores são os que o fabricante reporta.
-- Esta candidata não foi conferida contra a posição física das sondas. Confirme as leituras no equipamento ou no aplicativo do fabricante.
+- Esta versão não foi conferida contra a posição física das sondas. Confirme as leituras no equipamento ou no aplicativo do fabricante.
 
 ## Significado dos indicadores
 

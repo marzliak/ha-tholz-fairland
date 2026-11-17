@@ -1,5 +1,7 @@
 # Installation
 
+[![Open your Home Assistant instance and add this HACS repository](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=marzliak&repository=ha-tholz-fairland&category=integration)
+
 > **Illustrative UI guide.** Menu names may vary by Home Assistant version. For account setup, see [Configuration](configuration.md).
 
 ## 1. Before you start
@@ -16,16 +18,29 @@ Other Tholz product lines are not supported.
 
 ## 2. Installation method
 
-For this release candidate, installation uses the **manual package**. HACS installation is not available yet and will be documented after publication.
+**0.3.0 is the first public release (2026-11-16).** See the [release page](https://github.com/marzliak/ha-tholz-fairland/releases/tag/v0.3.0). Choose HACS or the manual package.
 
 | Method | Status in this release |
 |---|---|
 | Manual package (`tholz-fairland-0.3.0-integration.zip`) | Available |
-| HACS | Not available until publication |
+| HACS | Custom repository; default-catalogue inclusion not yet approved |
+
+### Through HACS
+
+**Prerequisite: HACS must already be installed in Home Assistant.**
+
+1. Use the badge above and confirm adding this custom repository.
+2. Open **Tholz Fairland** in HACS and confirm **Download** of version 0.3.0.
+3. **Restart Home Assistant** and wait for it to return.
+4. Go to **Settings → Devices & services → Add integration → Tholz Fairland** and follow [Configuration](configuration.md).
+
+To add it manually instead, open **HACS → ⋮ → Custom repositories**, enter `https://github.com/marzliak/ha-tholz-fairland`, select category **Integration**, and add it. Then follow the download, restart and setup steps above. This does not imply approval or listing in HACS's default catalogue.
+
+Sections 3 and 4 below are the manual-installation alternative; HACS users do not need to copy files.
 
 ## 3. Download and check the package
 
-1. Download `tholz-fairland-0.3.0-integration.zip`.
+1. Download the [manual package `tholz-fairland-0.3.0-integration.zip`](https://github.com/marzliak/ha-tholz-fairland/releases/download/v0.3.0/tholz-fairland-0.3.0-integration.zip).
 2. If the release page publishes a SHA-256 value for the file, compare it before extracting:
 
    ```bash
@@ -37,7 +52,7 @@ For this release candidate, installation uses the **manual package**. HACS insta
 3. Extract the archive into a temporary folder on your computer. The expected layout is:
 
    ```text
-   tholz-fairland-0.3.0-integration/
+   . (ZIP root, with no wrapper folder)
    ├── LICENSE
    └── custom_components/
        └── tholz_fairland/

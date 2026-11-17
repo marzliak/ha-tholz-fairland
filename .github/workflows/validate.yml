@@ -23,10 +23,9 @@ jobs:
       - name: Run hassfest
         uses: home-assistant/actions/hassfest@a7c616ce81ccda50150bf1595786c71b1883fabb # master
 
-  # HACS validation requires a public repository. While this repository is
-  # private the job is skipped by condition; it is never reported as passing.
+  # This repository is public. Always run HACS validation, including scheduled
+  # and manually dispatched runs; no checks may be skipped for catalogue entry.
   hacs:
-    if: github.event.repository.private == false
     runs-on: ubuntu-latest
     steps:
       - name: Run HACS validation

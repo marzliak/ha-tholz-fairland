@@ -1,4 +1,4 @@
-# Documentação — Tholz Fairland 0.3.0 (candidata a release)
+# Documentação — Tholz Fairland 0.3.0
 
 Guias de uso em português (PT-BR). Versões em inglês estão em [`en/`](en/README.md).
 
@@ -6,9 +6,9 @@ Guias de uso em português (PT-BR). Versões em inglês estão em [`en/`](en/REA
 
 ## Status desta versão
 
-- **Versão candidata (release candidate) 0.3.0.** Ainda não há release pública.
+- **Primeira versão pública: [0.3.0](https://github.com/marzliak/ha-tholz-fairland/releases/tag/v0.3.0), de 2026-11-16.**
 - **Instalação disponível:** pacote manual (`tholz-fairland-0.3.0-integration.zip`), descrito em [Instalação](installation.md).
-- **HACS:** indisponível nesta candidata. Será documentado após a publicação.
+- **HACS:** instalação por repositório personalizado, descrita em [Instalação](installation.md). A inclusão no catálogo padrão ainda não foi aprovada.
 - **Compatibilidade de Home Assistant:** testes automatizados com rede bloqueada passaram em **2025.2.4** e **2026.10.1**, incluindo configuração, carregamento das entidades, recarga e reautenticação com serviços simulados. Isso não certifica todas as versões intermediárias nem substitui a verificação da sua conta/equipamento.
 
 ## Roteiro de leitura
@@ -24,7 +24,7 @@ Guias de uso em português (PT-BR). Versões em inglês estão em [`en/`](en/REA
 | [Privacidade e segurança](privacy.md) | Dados armazenados, serviços externos e cuidados com backups | [en/privacy.md](en/privacy.md) |
 | [Atualização](updating.md) | Atualizar, migrar entradas existentes e reverter | [en/updating.md](en/updating.md) |
 | [Perguntas frequentes](FAQ.md) | Dúvidas comuns | [en/FAQ.md](en/FAQ.md) |
-| [Notas da versão 0.3.0](releases/0.3.0.md) | O que mudou nesta candidata | — |
+| [Notas da versão 0.3.0](releases/0.3.0.md) | O que mudou nesta versão | — |
 | [Exemplos](../examples/README.md) | Painel nativo e automações opcionais, prontos para adaptar | — |
 
 ## Como ler as imagens
