@@ -4,8 +4,6 @@
 
 # Tholz Fairland for Home Assistant
 
-[![Open your Home Assistant instance and add this HACS repository](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=marzliak&repository=ha-tholz-fairland&category=integration)
-
 **Your pool heat pump, connected to your Home Assistant routines.**
 
 An unofficial custom integration for cloud-connected **Tholz Fairland / TurboSilence pool heat pumps**. Change the operating mode, adjust the target water temperature, choose the fan mode, and understand what the equipment is doing—from one device page or your own dashboard.
@@ -88,23 +86,18 @@ Supported-family discovery does not certify every model, firmware, or account ar
 
 ## Install and configure
 
+### HACS installation (recommended)
+
+**HACS must already be installed.**
+
+1. In HACS, search for **Tholz Fairland** and open it.
+2. Select **Download** and confirm.
+3. Restart Home Assistant.
+4. Go to **Settings → Devices & services → Add integration → Tholz Fairland**.
+
 ### Manual installation
 
-**0.3.0 is the first public release (2026-11-16).** See the [release page](https://github.com/marzliak/ha-tholz-fairland/releases/tag/v0.3.0) and download the [manual integration package](https://github.com/marzliak/ha-tholz-fairland/releases/download/v0.3.0/tholz-fairland-0.3.0-integration.zip).
-
-1. Back up Home Assistant before adding or updating a custom integration.
-2. Extract `tholz-fairland-0.3.0-integration.zip`.
-3. Copy `custom_components/tholz_fairland` into your Home Assistant configuration directory, preserving that folder structure.
-4. Restart Home Assistant.
-5. Go to **Settings → Devices & services → Add integration → Tholz Fairland**.
-
-The [installation guide](docs/en/installation.md) covers Home Assistant OS, Container, file placement, common mistakes, and removal.
-
-### HACS installation
-
-**HACS must already be installed.** Use the badge above to add this custom repository, open Tholz Fairland in HACS, and confirm **Download**. Restart Home Assistant, then go to **Settings → Devices & services → Add integration → Tholz Fairland**.
-
-Alternatively, open **HACS → ⋮ → Custom repositories**, enter `https://github.com/marzliak/ha-tholz-fairland`, select category **Integration**, and add it. Then download, restart, and add the integration as above. **Inclusion in HACS's default catalogue has not yet been approved**; custom-repository installation does not imply catalogue listing.
+If you do not use HACS, back up Home Assistant, download the [manual integration package](https://github.com/marzliak/ha-tholz-fairland/releases/download/v0.3.0/tholz-fairland-0.3.0-integration.zip), and follow the [installation guide](docs/en/installation.md#3-download-and-check-the-package) for Home Assistant OS or Container.
 
 ### Account setup
 

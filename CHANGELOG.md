@@ -2,13 +2,16 @@
 
 User-visible changes to Tholz Fairland for Home Assistant.
 
+## Documentation update
+
+- Tholz Fairland joined the [default HACS catalogue](https://github.com/hacs/default/pull/14343) on 2026-11-26. The English and Portuguese guides now recommend searching for the integration in HACS and retain manual installation as an alternative. No integration code changed.
+
 ## 0.3.0 — 2026-11-16 — first public release
 
 ### HACS and installation
 
 - Publish [v0.3.0](https://github.com/marzliak/ha-tholz-fairland/releases/tag/v0.3.0) with the [manual integration ZIP](https://github.com/marzliak/ha-tholz-fairland/releases/download/v0.3.0/tholz-fairland-0.3.0-integration.zip).
-- Document HACS custom-repository installation with the official install badge, download confirmation, restart and integration setup sequence.
-- HACS default-catalogue inclusion has not yet been approved; custom-repository installation is separate from catalogue listing.
+- Document download, restart and integration setup for the first public release.
 
 ### Validation scope
 

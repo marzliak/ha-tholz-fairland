@@ -19,7 +19,7 @@ Yes. Each device needs its own entry. Repeat setup for each one.
 Automated tests with mocked cloud services passed on **2025.2.4** and **2026.10.1**. The declared minimum is 2025.2.4; this does not certify every intermediate version or every device model.
 
 **Can I install through HACS?**
-Yes, as a custom repository, with HACS already installed. Confirm the download, restart Home Assistant and add the integration. Default-catalogue inclusion has not yet been approved. See [Installation](installation.md), including the manual alternative.
+Yes. In HACS, search for **Tholz Fairland**, confirm the download, restart Home Assistant and add the integration. See [Installation](installation.md), including the manual alternative.
 
 **Is the heater's "current" temperature the pool temperature?**
 No. The current temperature is the water **inlet** reading at the device. The integration has no separate pool probe. See [Operation](operation.md#meaning-of-the-temperature-sensors).

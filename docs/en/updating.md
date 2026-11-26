@@ -20,7 +20,7 @@ Do not leave two folders of different versions inside `custom_components`. The o
 
 ## Update through HACS
 
-If installed through HACS, open **Tholz Fairland** in HACS, select the update and confirm **Download**. Restart Home Assistant and check entities and logs. You do not need to remove or re-add the configuration entry. For first-time custom-repository installation, see [Installation](installation.md); default-catalogue inclusion has not yet been approved.
+If installed through HACS, open **Tholz Fairland** in HACS, select the update and confirm **Download**. Restart Home Assistant and check entities and logs. You do not need to remove or re-add the configuration entry. For first-time installation, see [Installation](installation.md).
 
 ## Existing entries are migrated
 

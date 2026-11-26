@@ -19,7 +19,7 @@ Sim. Cada equipamento precisa de uma entrada própria. Repita o cadastro para ca
 Testes automatizados com serviços de nuvem simulados passaram em **2025.2.4** e **2026.10.1**. A versão mínima declarada é 2025.2.4; isso não certifica todas as versões intermediárias nem todos os modelos.
 
 **Posso instalar pelo HACS?**
-Sim, como repositório personalizado, com o HACS já instalado. Confirme o download, reinicie o Home Assistant e adicione a integração. A inclusão no catálogo padrão ainda não foi aprovada. Veja [Instalação](installation.md), incluindo a alternativa manual.
+Sim. No HACS, procure por **Tholz Fairland**, confirme o download, reinicie o Home Assistant e adicione a integração. Veja [Instalação](installation.md), incluindo a alternativa manual.
 
 **A temperatura "atual" do aquecedor é a da piscina?**
 Não. A temperatura atual é a leitura de **entrada** de água no equipamento. Não há sonda separada da piscina na integração. Veja [Operação](operation.md#significado-dos-sensores-de-temperatura).

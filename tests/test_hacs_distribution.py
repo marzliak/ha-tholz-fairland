@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
 
 import yaml
 
@@ -50,15 +49,26 @@ def test_hacs_validation_is_not_conditional_or_ignored() -> None:
     assert "hassfest" in workflow["jobs"]
 
 
-def test_install_badge_targets_this_custom_repository() -> None:
-    """Both public READMEs must link the official HACS repository redirect."""
-    for name in ("README.md", "README.pt-BR.md"):
+def test_install_guides_use_the_default_hacs_catalogue() -> None:
+    """Both languages present catalogue search before manual installation."""
+    guides = (
+        ("README.md", "### HACS installation", "### Manual installation"),
+        ("README.pt-BR.md", "### Pelo HACS", "### Pelo pacote manual"),
+        ("docs/en/installation.md", "### Through HACS", "## 3. Download"),
+        ("docs/installation.md", "### Pelo HACS", "## 3. Baixe"),
+    )
+    for name, hacs, manual in guides:
         text = (REPO / name).read_text()
-        assert "https://my.home-assistant.io/badges/hacs_repository.svg" in text
-        prefix = "https://my.home-assistant.io/redirect/hacs_repository/?"
-        target = prefix + text.split(prefix, 1)[1].split(")", 1)[0]
-        assert parse_qs(urlparse(target).query) == {
-            "owner": ["marzliak"],
-            "repository": ["ha-tholz-fairland"],
-            "category": ["integration"],
-        }
+        assert "hacs_repository" not in text
+        assert "custom repositor" not in text.casefold()
+        assert "repositório personalizado" not in text.casefold()
+        assert "not yet been approved" not in text.casefold()
+        assert "ainda não foi aprovada" not in text.casefold()
+        flow = text[text.index(hacs) : text.index(manual)]
+        assert re.search(r"(?:search for|procure por) \*\*Tholz Fairland\*\*", flow)
+        assert re.search(
+            r"\*\*Download\*\*.*(?:Restart|Reinicie).*"
+            r"(?:Add integration|Adicionar integração)",
+            flow,
+            re.DOTALL,
+        )
