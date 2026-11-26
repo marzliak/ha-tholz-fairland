@@ -8,7 +8,7 @@ Guias de uso em português (PT-BR). Versões em inglês estão em [`en/`](en/REA
 
 - **Primeira versão pública: [0.3.0](https://github.com/marzliak/ha-tholz-fairland/releases/tag/v0.3.0), de 2026-11-16.**
 - **Instalação disponível:** pacote manual (`tholz-fairland-0.3.0-integration.zip`), descrito em [Instalação](installation.md).
-- **HACS:** instalação por repositório personalizado, descrita em [Instalação](installation.md). A inclusão no catálogo padrão ainda não foi aprovada.
+- **HACS:** procure por **Tholz Fairland** no catálogo do HACS. Veja [Instalação](installation.md) para os passos completos e a alternativa manual.
 - **Compatibilidade de Home Assistant:** testes automatizados com rede bloqueada passaram em **2025.2.4** e **2026.10.1**, incluindo configuração, carregamento das entidades, recarga e reautenticação com serviços simulados. Isso não certifica todas as versões intermediárias nem substitui a verificação da sua conta/equipamento.
 
 ## Roteiro de leitura

@@ -4,8 +4,6 @@
 
 # Tholz Fairland para Home Assistant
 
-[![Abra seu Home Assistant e adicione este repositório ao HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=marzliak&repository=ha-tholz-fairland&category=integration)
-
 **Seu trocador de calor integrado aos painéis e às rotinas do Home Assistant.**
 
 [Read in English](README.md) · [Guia completo](docs/README.md) · [Instalação](docs/installation.md) · [Configuração](docs/configuration.md) · [Solução de problemas](docs/troubleshooting.md)
@@ -70,13 +68,18 @@ A restauração é uma tentativa, não uma garantia. Confira o aplicativo ou o e
 
 ## Instalação
 
-### Pelo HACS
+### Pelo HACS (recomendado)
 
-**O HACS já deve estar instalado.** Use o botão acima para adicionar este repositório personalizado, abra Tholz Fairland no HACS e confirme **Download**. Reinicie o Home Assistant e vá em **Configurações → Dispositivos e serviços → Adicionar integração → Tholz Fairland**.
+**O HACS já deve estar instalado.**
 
-Alternativa: em **HACS → ⋮ → Repositórios personalizados**, informe `https://github.com/marzliak/ha-tholz-fairland` e selecione a categoria **Integration**. Adicione, confirme o download, reinicie e adicione a integração. **A inclusão no catálogo padrão do HACS ainda não foi aprovada**; a instalação por repositório personalizado não significa listagem no catálogo.
+1. No HACS, procure por **Tholz Fairland** e abra a integração.
+2. Selecione **Download** e confirme.
+3. Reinicie o Home Assistant.
+4. Vá em **Configurações → Dispositivos e serviços → Adicionar integração → Tholz Fairland**.
 
 ### Pelo pacote manual
+
+Use esta opção se você não usa HACS. Faça um backup antes de instalar.
 
 1. Baixe e extraia o [pacote manual 0.3.0](https://github.com/marzliak/ha-tholz-fairland/releases/download/v0.3.0/tholz-fairland-0.3.0-integration.zip).
 2. Copie a pasta `tholz_fairland` de `custom_components/` do pacote para `custom_components/` do Home Assistant.

@@ -20,7 +20,7 @@ Não deixe duas pastas de versões diferentes dentro de `custom_components`. A p
 
 ## Atualização pelo HACS
 
-Se instalou pelo HACS, abra **Tholz Fairland** no HACS, selecione a atualização e confirme **Download**. Reinicie o Home Assistant e confira as entidades e os registros. Não é necessário remover nem adicionar novamente a entrada. Para a primeira instalação por repositório personalizado, veja [Instalação](installation.md); a inclusão no catálogo padrão ainda não foi aprovada.
+Se instalou pelo HACS, abra **Tholz Fairland** no HACS, selecione a atualização e confirme **Download**. Reinicie o Home Assistant e confira as entidades e os registros. Não é necessário remover nem adicionar novamente a entrada. Para a primeira instalação, veja [Instalação](installation.md).
 
 ## Entradas existentes são migradas
 

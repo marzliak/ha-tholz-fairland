@@ -1,7 +1,5 @@
 # Instalação
 
-[![Abra seu Home Assistant e adicione este repositório ao HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=marzliak&repository=ha-tholz-fairland&category=integration)
-
 > **Guia ilustrativo.** Os nomes de menus podem variar conforme a versão do Home Assistant. Para a configuração da conta, veja [Configuração](configuration.md).
 
 ## 1. Antes de começar
@@ -18,25 +16,18 @@ Equipamentos de outras linhas Tholz não são suportados.
 
 ## 2. Método de instalação
 
-**0.3.0 é a primeira versão pública (2026-11-16).** Veja a [release](https://github.com/marzliak/ha-tholz-fairland/releases/tag/v0.3.0). Escolha HACS ou o pacote manual.
-
-| Método | Situação nesta versão |
-|---|---|
-| Pacote manual (`tholz-fairland-0.3.0-integration.zip`) | Disponível |
-| HACS | Repositório personalizado; inclusão no catálogo padrão ainda não aprovada |
+**0.3.0 é a primeira versão pública (2026-11-16).** Veja a [release](https://github.com/marzliak/ha-tholz-fairland/releases/tag/v0.3.0). Recomendamos o HACS. Use o pacote manual se você não usa HACS.
 
 ### Pelo HACS
 
-**Pré-requisito: HACS já instalado no Home Assistant.**
+**O HACS já deve estar instalado.**
 
-1. Use o botão acima e confirme a adição deste repositório personalizado.
-2. Abra **Tholz Fairland** no HACS e confirme **Download** da versão 0.3.0.
-3. **Reinicie o Home Assistant** e aguarde seu retorno.
+1. No HACS, procure por **Tholz Fairland** e abra a integração.
+2. Selecione **Download** e confirme.
+3. Reinicie o Home Assistant.
 4. Vá em **Configurações → Dispositivos e serviços → Adicionar integração → Tholz Fairland** e siga [Configuração](configuration.md).
 
-Se preferir adicionar manualmente: em **HACS → ⋮ → Repositórios personalizados**, informe `https://github.com/marzliak/ha-tholz-fairland`, selecione a categoria **Integration** e adicione. Depois siga os passos de download, reinicialização e cadastro acima. Isso não significa aprovação ou listagem no catálogo padrão do HACS.
-
-Os passos 3 e 4 abaixo são a alternativa de instalação manual; quem instalou pelo HACS não precisa copiar arquivos.
+As seções 3 e 4 abaixo são a alternativa de instalação manual; quem instalou pelo HACS não precisa copiar arquivos.
 
 ## 3. Baixe e confira o pacote
 
